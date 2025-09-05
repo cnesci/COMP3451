@@ -1,6 +1,6 @@
 plugins {
     id("com.android.application")
-    id("androidx.navigation.safeargs")
+    id("androidx.navigation.safeargs") // Java Safe Args plugin
 }
 
 android {
@@ -14,6 +14,19 @@ android {
         versionCode = 1
         versionName = "1.0.0-P4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // --- Secrets pulled from gradle.properties
+        buildConfigField(
+            "String",
+            "OPEN_CAGE_API_KEY",
+            "\"${project.findProperty("OPENCAGE_API_KEY") ?: ""}\""
+        )
+
+        val pfId = (project.findProperty("PETFINDER_CLIENT_ID") as String?) ?: ""
+        val pfSecret = (project.findProperty("PETFINDER_CLIENT_SECRET") as String?) ?: ""
+
+        buildConfigField("String", "PETFINDER_CLIENT_ID", "\"$pfId\"")
+        buildConfigField("String", "PETFINDER_CLIENT_SECRET", "\"$pfSecret\"")
     }
 
     buildTypes {
@@ -30,13 +43,15 @@ android {
         }
     }
 
+    // Enable BuildConfig
+    buildFeatures {
+        buildConfig = true
+        viewBinding = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    buildFeatures {
-        viewBinding = true
     }
 
     packaging {
@@ -65,6 +80,10 @@ dependencies {
 
     implementation(libs.glide.core)
     annotationProcessor(libs.glide.compiler)
+
+    // ViewModel & LiveData (needed for the Java-only integration plan)
+    implementation("androidx.lifecycle:lifecycle-viewmodel:2.8.4")
+    implementation("androidx.lifecycle:lifecycle-livedata:2.8.4")
 
     testImplementation(libs.junit4)
     androidTestImplementation(libs.androidx.junit)
