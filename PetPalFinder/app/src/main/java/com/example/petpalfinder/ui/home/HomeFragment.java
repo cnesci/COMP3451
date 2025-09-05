@@ -1,4 +1,4 @@
-package com.example.petpalfinder.ui;
+package com.example.petpalfinder.ui.home;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
