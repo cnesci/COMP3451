@@ -29,7 +29,7 @@ public class RetrofitProviders {
         tokenManager = new TokenManager(ctx.getApplicationContext());
 
         HttpLoggingInterceptor logs = new HttpLoggingInterceptor();
-        logs.setLevel(HttpLoggingInterceptor.Level.BASIC);
+        logs.setLevel(HttpLoggingInterceptor.Level.BODY);
 
         OkHttpClient authClient = new OkHttpClient.Builder()
                 .addInterceptor(logs)

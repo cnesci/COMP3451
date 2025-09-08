@@ -14,4 +14,5 @@ public class Animal {
     public Double distance;
     public List<Photo> photos;
     public Contact contact;
+    public String url;
 }

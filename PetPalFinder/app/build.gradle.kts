@@ -81,11 +81,13 @@ dependencies {
     implementation(libs.glide.core)
     annotationProcessor(libs.glide.compiler)
 
-    // ViewModel & LiveData (needed for the Java-only integration plan)
+    // ViewModel & LiveData
     implementation("androidx.lifecycle:lifecycle-viewmodel:2.8.4")
     implementation("androidx.lifecycle:lifecycle-livedata:2.8.4")
 
     testImplementation(libs.junit4)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.espresso.core)
+
+    implementation("androidx.viewpager2:viewpager2:1.0.0") // for the photo carousel
 }
