@@ -1,13 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/nav_graph"
     app:startDestination="@id/homeFragment">
 
     <fragment
         android:id="@+id/homeFragment"
         android:name="com.example.petpalfinder.ui.home.HomeFragment"
-        android:label="Home"
-        tools:layout="@layout/fragment_home" />
+        android:label="Pet Pal Finder">
+        <action
+            android:id="@+id/action_homeFragment_to_petSearchFragment"
+            app:destination="@id/petSearchFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/petSearchFragment"
+        android:name="com.example.petpalfinder.ui.search.PetSearchFragment"
+        android:label="Nearby Pets">
+        <argument android:name="location" app:argType="string" android:defaultValue=""/>
+        <argument android:name="type" app:argType="string" android:defaultValue="dog"/>
+
+        <action
+            android:id="@+id/action_petSearchFragment_to_petDetailFragment"
+            app:destination="@id/petDetailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/petDetailFragment"
+        android:name="com.example.petpalfinder.ui.search.PetDetailFragment"
+        android:label="Pet Details">
+        <argument
+            android:name="animalId"
+            app:argType="long" />
+    </fragment>
 </navigation>
+

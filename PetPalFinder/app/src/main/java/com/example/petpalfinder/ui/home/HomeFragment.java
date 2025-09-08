@@ -10,9 +10,12 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.fragment.NavHostFragment;
 
 import com.example.petpalfinder.R;
 import com.example.petpalfinder.repository.GeocodingRepository;
+
+import java.util.Locale;
 
 public class HomeFragment extends Fragment {
 
@@ -36,7 +39,7 @@ public class HomeFragment extends Fragment {
         if (title != null) title.setText("Pet Pal Finder");
         if (subtitle != null) subtitle.setText("Geocoding test…");
 
-        // Try a sample address (replace with any shelter address later)
+        // Try a sample address (replace with user input later)
         String testAddress = "Toronto, ON";
 
         repo.forwardSimple(testAddress, new GeocodingRepository.SimpleHandler() {
@@ -46,6 +49,15 @@ public class HomeFragment extends Fragment {
                 String msg = "OK: " + formatted + " → " + lat + ", " + lng;
                 if (subtitle != null) subtitle.setText(msg);
                 Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show();
+
+                String location = String.format(Locale.US, "%.5f,%.5f", lat, lng);
+
+                HomeFragmentDirections.ActionHomeFragmentToPetSearchFragment dir =
+                        HomeFragmentDirections.actionHomeFragmentToPetSearchFragment();
+                dir.setLocation(location);
+                dir.setType("dog");
+
+                NavHostFragment.findNavController(HomeFragment.this).navigate(dir);
             }
 
             @Override

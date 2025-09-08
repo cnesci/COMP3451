@@ -21,5 +21,5 @@ public interface PetfinderApiService {
     );
 
     @GET("animals/{id}")
-    Call<Animal> getAnimal(@Path("id") long id);
+    Call<com.example.petpalfinder.model.petfinder.SingleAnimalResponse> getAnimal(@Path("id") long id);
 }

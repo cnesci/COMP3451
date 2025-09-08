@@ -36,10 +36,12 @@ public class PetfinderRepository {
     }
 
     public Animal getAnimal(long id) throws IOException {
-        Response<Animal> r = api.getAnimal(id).execute();
-        if (!r.isSuccessful() || r.body() == null) {
+        retrofit2.Response<com.example.petpalfinder.model.petfinder.SingleAnimalResponse> r =
+                api.getAnimal(id).execute();
+        if (!r.isSuccessful() || r.body() == null || r.body().animal == null) {
             throw new IOException("Animal fetch failed: HTTP " + r.code());
         }
-        return r.body();
+        return r.body().animal;
     }
+
 }

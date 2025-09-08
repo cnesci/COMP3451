@@ -33,10 +33,10 @@ public class PetSearchFragment extends Fragment {
         RecyclerView list = v.findViewById(R.id.list);
         ProgressBar pb = v.findViewById(R.id.progress);
 
-        adapter = new AnimalAdapter(new AnimalAdapter.OnClick() {
-            @Override public void onAnimal(Animal a) {
-                Toast.makeText(getContext(), "Clicked " + a.name + " (#" + a.id + ")", Toast.LENGTH_SHORT).show();
-            }
+        adapter = new AnimalAdapter(a -> {
+            PetSearchFragmentDirections.ActionPetSearchFragmentToPetDetailFragment dir =
+                    PetSearchFragmentDirections.actionPetSearchFragmentToPetDetailFragment(a.id);
+            androidx.navigation.fragment.NavHostFragment.findNavController(PetSearchFragment.this).navigate(dir);
         });
 
         list.setLayoutManager(new LinearLayoutManager(getContext()));
@@ -51,10 +51,10 @@ public class PetSearchFragment extends Fragment {
 
         vm.results().observe(getViewLifecycleOwner(), adapter::setItems);
 
-        // Toronto sample — swap with your geocoder output "lat,lon"
+        // Toronto sample
         vm.firstSearch("dog", "43.6532,-79.3832");
 
-        // Simple pagination trigger (optional)
+        // Simple pagination trigger
         list.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
                 if (dy <= 0) return;
@@ -66,5 +66,23 @@ public class PetSearchFragment extends Fragment {
                 if (first + visible >= (int)(0.8 * total)) vm.nextPage();
             }
         });
+
+        PetSearchFragmentArgs args = PetSearchFragmentArgs.fromBundle(getArguments());
+        String location = args.getLocation();
+        String type = args.getType();
+        if (location == null || location.isEmpty()) location = "43.6532,-79.3832"; // fallback
+        vm.firstSearch(type, location);
+
+        // endless scroll
+        list.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
+                if (dy <= 0) return;
+                LinearLayoutManager lm = (LinearLayoutManager) rv.getLayoutManager();
+                if (lm == null) return;
+                int visible = lm.getChildCount(), total = lm.getItemCount(), first = lm.findFirstVisibleItemPosition();
+                if (first + visible >= (int)(0.8 * total)) vm.nextPage();
+            }
+        });
+
     }
 }

@@ -39,7 +39,14 @@ public class AnimalAdapter extends RecyclerView.Adapter<AnimalAdapter.VH> {
         h.name.setText(a.name != null ? a.name : "(Unnamed)");
         String meta = (a.age != null ? a.age : "?") + " • " + (a.gender != null ? a.gender : "?") + " • " + (a.size != null ? a.size : "?");
         h.meta.setText(meta);
-        h.distance.setText(a.distance != null ? String.format("%.1f mi", a.distance) : "");
+
+        if (a.distance != null) {
+            double km = a.distance * 1.60934;
+            h.distance.setText(String.format(java.util.Locale.US, "%.1f km", km));
+        } else {
+            h.distance.setText("");
+        }
+
         String img = firstPhoto(a.photos);
         Glide.with(h.img.getContext()).load(img).placeholder(R.drawable.ic_paw).into(h.img);
         h.itemView.setOnClickListener(new View.OnClickListener() {
