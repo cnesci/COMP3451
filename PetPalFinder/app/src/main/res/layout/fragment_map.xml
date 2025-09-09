@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:mapbox="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.mapbox.maps.MapView
+        android:id="@+id/mapView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        mapbox:mapbox_resourcesAccessToken="@string/mapbox_access_token"/>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_gravity="top|end"
+        android:layout_margin="12dp">
+
+        <ImageButton
+            android:id="@+id/btnMyLocation"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="My location"
+            android:src="@android:drawable/ic_menu_mylocation" />
+
+        <ImageButton
+            android:id="@+id/btnListView"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Back to list"
+            android:src="@android:drawable/ic_menu_sort_by_size" />
+    </LinearLayout>
+
+</FrameLayout>

@@ -24,9 +24,14 @@ android {
 
         val pfId = (project.findProperty("PETFINDER_CLIENT_ID") as String?) ?: ""
         val pfSecret = (project.findProperty("PETFINDER_CLIENT_SECRET") as String?) ?: ""
-
         buildConfigField("String", "PETFINDER_CLIENT_ID", "\"$pfId\"")
         buildConfigField("String", "PETFINDER_CLIENT_SECRET", "\"$pfSecret\"")
+
+        // Mapbox
+        val mapboxToken = (project.findProperty("MAPBOX_PUBLIC_TOKEN") as String?) ?: ""
+        resValue("string", "mapbox_access_token", mapboxToken)
+        manifestPlaceholders["MAPBOX_ACCESS_TOKEN"] = mapboxToken
+        buildConfigField("String", "MAPBOX_PUBLIC_TOKEN", "\"$mapboxToken\"")
     }
 
     buildTypes {
@@ -90,4 +95,8 @@ dependencies {
     androidTestImplementation(libs.espresso.core)
 
     implementation("androidx.viewpager2:viewpager2:1.0.0") // for the photo carousel
+
+    // Mapbox Maps SDK
+    implementation("com.mapbox.maps:android:10.18.1")
+    implementation("androidx.core:core-ktx:1.13.1")
 }
