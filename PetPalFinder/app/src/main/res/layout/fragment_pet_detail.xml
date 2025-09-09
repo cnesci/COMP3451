@@ -66,6 +66,21 @@
                 android:textSize="15sp"
                 android:lineSpacingExtra="2dp" />
 
+            <TextView
+                android:id="@+id/shelterHeader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textStyle="bold"
+                android:text="About the shelter"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"/>
+
+            <TextView
+                android:id="@+id/shelterInfo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone"/>
+
             <Button
                 android:id="@+id/btnViewOnPetfinder"
                 android:layout_width="match_parent"

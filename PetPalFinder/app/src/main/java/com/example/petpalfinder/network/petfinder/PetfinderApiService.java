@@ -2,6 +2,7 @@ package com.example.petpalfinder.network.petfinder;
 
 import com.example.petpalfinder.model.petfinder.Animal;
 import com.example.petpalfinder.model.petfinder.AnimalsResponse;
+import com.example.petpalfinder.model.petfinder.OrganizationResponse;
 import retrofit2.Call;
 import retrofit2.http.GET;
 import retrofit2.http.Path;
@@ -22,4 +23,7 @@ public interface PetfinderApiService {
 
     @GET("animals/{id}")
     Call<com.example.petpalfinder.model.petfinder.SingleAnimalResponse> getAnimal(@Path("id") long id);
+
+    @GET("organizations/{id}")
+    Call<OrganizationResponse> getOrganization(@Path("id") String id);
 }

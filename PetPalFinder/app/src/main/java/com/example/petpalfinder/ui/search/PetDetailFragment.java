@@ -3,7 +3,7 @@ package com.example.petpalfinder.ui.search;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.text.Spanned;
+import android.text.Layout;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,8 +12,6 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.text.Layout;
-import android.webkit.WebView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -37,13 +35,15 @@ public class PetDetailFragment extends Fragment {
     private PetDetailViewModel vm;
     private PhotoPagerAdapter pagerAdapter;
 
-    @Nullable @Override
+    @Nullable
+    @Override
     public View onCreateView(@NonNull LayoutInflater inf, @Nullable ViewGroup c, @Nullable Bundle s) {
         return inf.inflate(R.layout.fragment_pet_detail, c, false);
     }
 
     @Override
     public void onViewCreated(@NonNull View v, @Nullable Bundle s) {
+        super.onViewCreated(v, s);
         vm = new ViewModelProvider(this).get(PetDetailViewModel.class);
 
         // Carousel
@@ -54,17 +54,18 @@ public class PetDetailFragment extends Fragment {
         pager.setOffscreenPageLimit(1);
         new TabLayoutMediator(dots, pager, (tab, position) -> {}).attach();
 
+        // UI refs
         TextView name = v.findViewById(R.id.name);
         TextView meta = v.findViewById(R.id.meta);
         TextView distance = v.findViewById(R.id.distance);
         TextView desc = v.findViewById(R.id.description);
-        Button openWeb = v.findViewById(R.id.btnViewOnPetfinder);
+        Button openWeb = v.findViewById(R.id.btnViewOnPetfinder); // optional (only if exists in XML)
         Button email = v.findViewById(R.id.btnEmail);
         Button phone = v.findViewById(R.id.btnPhone);
         ProgressBar pb = v.findViewById(R.id.progress);
 
-        vm.loading().observe(getViewLifecycleOwner(), isLoading ->
-                pb.setVisibility(Boolean.TRUE.equals(isLoading) ? View.VISIBLE : View.GONE));
+        vm.loading().observe(getViewLifecycleOwner(),
+                isLoading -> pb.setVisibility(Boolean.TRUE.equals(isLoading) ? View.VISIBLE : View.GONE));
 
         vm.error().observe(getViewLifecycleOwner(), err -> {
             if (!TextUtils.isEmpty(err)) Toast.makeText(getContext(), err, Toast.LENGTH_LONG).show();
@@ -73,7 +74,7 @@ public class PetDetailFragment extends Fragment {
         vm.animal().observe(getViewLifecycleOwner(), a -> {
             if (a == null) return;
 
-            // ---------- CAROUSEL: build photo URLs and set adapter ----------
+            // --------- CAROUSEL ---------
             List<String> urls = new ArrayList<>();
             if (a.photos != null) {
                 for (Photo p : a.photos) {
@@ -84,10 +85,10 @@ public class PetDetailFragment extends Fragment {
                     if (p.small != null)  { urls.add(p.small);  continue; }
                 }
             }
-            if (urls.isEmpty()) urls.add(null);        // will show placeholder
-            pagerAdapter.setPhotos(urls);              // <-- THIS WAS MISSING
+            if (urls.isEmpty()) urls.add(null); // placeholder slide
+            pagerAdapter.setPhotos(urls);
 
-            // ---------- TOP TEXT ----------
+            // --------- HEADER TEXT ---------
             name.setText(!TextUtils.isEmpty(a.name) ? a.name : "(Unnamed)");
             String metaText = String.format(Locale.US, "%s • %s • %s",
                     safe(a.age), safe(a.gender), safe(a.size));
@@ -100,45 +101,30 @@ public class PetDetailFragment extends Fragment {
                 distance.setText("");
             }
 
-            openWeb.setOnClickListener(vv -> {
-                String url = null;
-                try {
-                    java.lang.reflect.Field f = a.getClass().getField("url");
-                    Object val = f.get(a);
-                    if (val instanceof String) url = (String) val;
-                } catch (Throwable ignored) {}
-
-                if (TextUtils.isEmpty(url)) {
-                    Toast.makeText(getContext(), "Listing URL not available for this pet.", Toast.LENGTH_SHORT).show();
-                } else {
-                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-                }
-            });
-
-
-            // ---------- DESCRIPTION: HTML + never truncate ----------
-            if (!TextUtils.isEmpty(a.description)) {
-                Spanned sp = HtmlCompat.fromHtml(a.description, HtmlCompat.FROM_HTML_MODE_LEGACY);
-                desc.setText(sp, TextView.BufferType.SPANNABLE);
-                android.util.Log.d("PF_DETAIL_API",
-                        "apiDescLen=" + (a.description == null ? 0 : a.description.length()));
-            } else {
-                desc.setText("No description available.");
+            if (openWeb != null) {
+                openWeb.setOnClickListener(vv -> {
+                    if (!TextUtils.isEmpty(a.url)) {
+                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(a.url)));
+                    } else {
+                        Toast.makeText(getContext(), "Listing URL not available for this pet.", Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
 
-            // make sure no truncation is applied
+            // --------- DESCRIPTION: HTML base + composed “About” (bulleted) ---------
+            CharSequence about = composeDescription(a);
+            desc.setText(TextUtils.isEmpty(about) ? "No description available." : about);
+
+            // Never truncate
             desc.setSingleLine(false);
             desc.setHorizontallyScrolling(false);
             desc.setEllipsize(null);
             desc.setMaxLines(Integer.MAX_VALUE);
-
-            // better wrapping
             try {
                 desc.setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY);
                 desc.setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NORMAL);
-            } catch (Throwable ignored) { }
+            } catch (Throwable ignore) {}
 
-            // Re-assert after layout (wins if a style/theme applies limits later)
             desc.post(() -> {
                 desc.setSingleLine(false);
                 desc.setHorizontallyScrolling(false);
@@ -147,43 +133,168 @@ public class PetDetailFragment extends Fragment {
                 try {
                     desc.setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY);
                     desc.setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NORMAL);
-                } catch (Throwable ignored) { }
-
-                Layout layout = desc.getLayout();
-                boolean ellipsized = false;
-                if (layout != null) {
-                    for (int i = 0; i < layout.getLineCount(); i++) {
-                        if (layout.getEllipsisCount(i) > 0) { ellipsized = true; break; }
-                    }
-                }
-                android.util.Log.d("PF_DETAIL", "layoutEllipsized=" + ellipsized);
+                } catch (Throwable ignore) {}
             });
 
-            // ---------- CONTACT BUTTONS ----------
-            String emailAddr = (a.contact != null) ? a.contact.email : null;
-            String phoneNum = (a.contact != null) ? a.contact.phone : null;
+            // --------- CONTACT BUTTONS ---------
+            String rawEmail = (a.contact != null) ? a.contact.email : null;
+            String rawPhone = (a.contact != null) ? a.contact.phone : null;
+            String emailAddr = normalizeEmail(rawEmail);
+            String phoneNum  = normalizePhone(rawPhone);
 
             email.setEnabled(!TextUtils.isEmpty(emailAddr));
             phone.setEnabled(!TextUtils.isEmpty(phoneNum));
 
             email.setOnClickListener(v1 -> {
-                if (TextUtils.isEmpty(emailAddr)) return;
-                Intent i = new Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:" + emailAddr));
-                i.putExtra(Intent.EXTRA_SUBJECT, "Pet adoption inquiry: " + a.name);
-                startActivity(Intent.createChooser(i, "Send email"));
+                if (TextUtils.isEmpty(emailAddr)) {
+                    Toast.makeText(getContext(), "No email provided by the shelter.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                Intent intent = new Intent(Intent.ACTION_SENDTO);
+                intent.setData(Uri.parse("mailto:"));
+                intent.putExtra(Intent.EXTRA_EMAIL, new String[]{ emailAddr });
+                intent.putExtra(Intent.EXTRA_SUBJECT, "Pet adoption inquiry: " + (a.name != null ? a.name : "Pet"));
+                if (intent.resolveActivity(requireContext().getPackageManager()) != null) {
+                    startActivity(Intent.createChooser(intent, "Send email"));
+                } else {
+                    Intent viewIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("mailto:" + Uri.encode(emailAddr)));
+                    if (viewIntent.resolveActivity(requireContext().getPackageManager()) != null) {
+                        startActivity(viewIntent);
+                    } else {
+                        Toast.makeText(getContext(), "No email app found on this device.", Toast.LENGTH_SHORT).show();
+                    }
+                }
             });
 
             phone.setOnClickListener(v12 -> {
-                if (TextUtils.isEmpty(phoneNum)) return;
-                Intent i = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + phoneNum));
-                startActivity(i);
+                if (TextUtils.isEmpty(phoneNum)) {
+                    Toast.makeText(getContext(), "No phone number provided by the shelter.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                Intent dial = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(phoneNum)));
+                if (dial.resolveActivity(requireContext().getPackageManager()) != null) {
+                    startActivity(dial);
+                } else {
+                    Toast.makeText(getContext(), "No dialer app found on this device.", Toast.LENGTH_SHORT).show();
+                }
             });
         });
-
 
         long id = PetDetailFragmentArgs.fromBundle(getArguments()).getAnimalId();
         vm.load(id);
     }
 
     private String safe(String s) { return s == null ? "?" : s; }
+
+    // ---------- in-app description using structured fields ----------
+    private CharSequence composeDescription(Animal a) {
+        StringBuilder sb = new StringBuilder();
+
+        // 1) Original shelter description (HTML -> plain text)
+        if (!TextUtils.isEmpty(a.description)) {
+            CharSequence sp = HtmlCompat.fromHtml(a.description, HtmlCompat.FROM_HTML_MODE_LEGACY);
+            sb.append(stripTrailingWhitespace(sp.toString())).append("\n\n");
+        }
+
+        // 2) Quick facts (join many non-empty parts)
+        String breed = joinPair(a.breeds != null ? a.breeds.primary : null,
+                a.breeds != null ? a.breeds.secondary : null, " & ");
+        String color = joinPair(a.colors != null ? a.colors.primary : null,
+                a.colors != null ? a.colors.secondary : null, ", ");
+        List<String> parts = new ArrayList<>();
+        addIfNotEmpty(parts, a.age);
+        addIfNotEmpty(parts, a.gender);
+        addIfNotEmpty(parts, a.size);
+        if (!TextUtils.isEmpty(breed)) parts.add(breed);
+        if (!TextUtils.isEmpty(a.coat)) parts.add(a.coat + " coat");
+        if (!TextUtils.isEmpty(color)) parts.add("color: " + color);
+        String facts = TextUtils.join(", ", parts);
+        if (!TextUtils.isEmpty(facts)) sb.append("• ").append(facts).append("\n");
+
+        // 3) Health & training
+        String health = bullets(
+                flag(a.attributes != null ? a.attributes.spayed_neutered : null, "Spayed/Neutered"),
+                flag(a.attributes != null ? a.attributes.shots_current   : null, "Vaccinations up to date"),
+                flag(a.attributes != null ? a.attributes.house_trained   : null, "House-trained"),
+                flag(a.attributes != null ? a.attributes.declawed        : null, "Declawed"),
+                flag(a.attributes != null ? a.attributes.special_needs   : null, "Special needs")
+        );
+        if (!TextUtils.isEmpty(health)) sb.append(health);
+
+        // 4) Good with…
+        String env = bullets(
+                boolLine(a.environment != null ? a.environment.children : null, "Good with children"),
+                boolLine(a.environment != null ? a.environment.dogs     : null, "Good with dogs"),
+                boolLine(a.environment != null ? a.environment.cats     : null, "Good with cats")
+        );
+        if (!TextUtils.isEmpty(env)) sb.append(env);
+
+        // 5) Personality tags
+        if (a.tags != null && !a.tags.isEmpty()) {
+            sb.append("• Personality: ").append(TextUtils.join(", ", a.tags)).append("\n");
+        }
+
+        // 6) Location / contact
+        String locality = null;
+        if (a.contact != null && a.contact.address != null) {
+            locality = joinPair(a.contact.address.city, a.contact.address.state, ", ");
+            if (TextUtils.isEmpty(locality)) locality = a.contact.address.postcode;
+        }
+        if (!TextUtils.isEmpty(locality)) sb.append("• Location: ").append(locality).append("\n");
+
+        return stripTrailingWhitespace(sb.toString());
+    }
+
+    // ---------- helpers ----------
+    private void addIfNotEmpty(List<String> list, String value) {
+        if (!TextUtils.isEmpty(value)) list.add(value);
+    }
+
+    private String joinPair(String a, String b, String sep) {
+        if (TextUtils.isEmpty(a)) return TextUtils.isEmpty(b) ? "" : b;
+        if (TextUtils.isEmpty(b)) return a;
+        return a + sep + b;
+    }
+
+    private String flag(Boolean val, String label) {
+        if (val == null) return null;
+        return val ? label : ("Not " + label.toLowerCase());
+    }
+
+    private String boolLine(Boolean val, String label) {
+        if (val == null) return null;
+        return (val ? label : ("Not " + label.toLowerCase()));
+    }
+
+    private String bullets(String... lines) {
+        StringBuilder sb = new StringBuilder();
+        for (String line : lines) {
+            if (!TextUtils.isEmpty(line)) sb.append("• ").append(line).append("\n");
+        }
+        return sb.toString();
+    }
+
+    private String stripTrailingWhitespace(String s) {
+        if (s == null) return "";
+        int i = s.length() - 1;
+        while (i >= 0 && Character.isWhitespace(s.charAt(i))) i--;
+        return s.substring(0, i + 1);
+    }
+
+    private String normalizeEmail(String in) {
+        if (in == null) return null;
+        String s = in.trim();
+        if (s.startsWith("mailto:")) s = s.substring("mailto:".length());
+        return (s.contains("@") && !s.contains(" ")) ? s : null;
+    }
+
+    private String normalizePhone(String in) {
+        if (in == null) return null;
+        StringBuilder sb = new StringBuilder();
+        for (char c : in.toCharArray()) {
+            if (Character.isDigit(c) || c == '+') sb.append(c);
+        }
+        String s = sb.toString();
+        return s.length() >= 7 ? s : null;
+    }
 }

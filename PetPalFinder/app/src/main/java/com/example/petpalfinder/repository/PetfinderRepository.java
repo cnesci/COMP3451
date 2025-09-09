@@ -6,6 +6,8 @@ import androidx.annotation.Nullable;
 
 import com.example.petpalfinder.model.petfinder.Animal;
 import com.example.petpalfinder.model.petfinder.AnimalsResponse;
+import com.example.petpalfinder.model.petfinder.Organization;
+import com.example.petpalfinder.model.petfinder.OrganizationResponse;
 import com.example.petpalfinder.network.petfinder.PetfinderApiService;
 import com.example.petpalfinder.network.petfinder.RetrofitProviders;
 
@@ -44,4 +46,11 @@ public class PetfinderRepository {
         return r.body().animal;
     }
 
+    public Organization getOrganization(String id) throws IOException {
+        Response<OrganizationResponse> r = api.getOrganization(id).execute();
+        if (!r.isSuccessful() || r.body() == null || r.body().organization == null) {
+            throw new IOException("Org fetch failed: HTTP " + r.code());
+        }
+        return r.body().organization;
+    }
 }
