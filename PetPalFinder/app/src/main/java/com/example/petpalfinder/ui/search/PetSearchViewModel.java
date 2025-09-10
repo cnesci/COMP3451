@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
+import com.example.petpalfinder.data.FilterParams;
 import com.example.petpalfinder.model.petfinder.Animal;
 import com.example.petpalfinder.model.petfinder.AnimalsResponse;
 import com.example.petpalfinder.repository.PetfinderRepository;
@@ -25,7 +26,12 @@ public class PetSearchViewModel extends AndroidViewModel {
     private final MutableLiveData<String> error = new MutableLiveData<>(null);
     private final MutableLiveData<List<Animal>> results = new MutableLiveData<>(Collections.<Animal>emptyList());
 
+    // Filters
+    private final MutableLiveData<FilterParams> filters = new MutableLiveData<>();
+
+    // Paging + context
     private int currentPage = 1;
+    private boolean endReached = false;
     private String lastLocation;
     private String lastType;
 
@@ -39,35 +45,91 @@ public class PetSearchViewModel extends AndroidViewModel {
     public LiveData<Boolean> loading() { return loading; }
     public LiveData<String> error() { return error; }
     public LiveData<List<Animal>> results() { return results; }
+    public LiveData<FilterParams> getFilters() { return filters; }
 
+    /**
+     * Initialize the baseline search context and default filters.
+     * Call this once when the fragment starts (or when args change).
+     */
     public void firstSearch(String type, String location) {
-        currentPage = 1;
+        // Remember context
         lastType = type;
         lastLocation = location;
+
+        // Initialize filters if not set
+        if (filters.getValue() == null) {
+            FilterParams def = FilterParams.defaults(type);
+            filters.postValue(def);
+        } else if (filters.getValue().type == null) {
+            // Ensure type is always set
+            FilterParams cur = filters.getValue();
+            cur.type = type;
+            filters.postValue(cur);
+        }
+
+        // Reset paging and load
+        currentPage = 1;
+        endReached = false;
         runSearch(1, true);
     }
 
+    public void applyFilters(@NonNull FilterParams newFilters) {
+        // Keep lastType/lastLocation as fallbacks
+        if (newFilters.type == null) newFilters.type = lastType;
+
+        filters.postValue(newFilters);
+        // Reset pagination and data
+        currentPage = 1;
+        endReached = false;
+        results.postValue(Collections.<Animal>emptyList());
+        runSearch(1, true);
+    }
+
+    /**
+     * Load next page when user scrolls.
+     */
     public void nextPage() {
+        if (Boolean.TRUE.equals(loading.getValue())) return;
+        if (endReached) return;
         runSearch(currentPage + 1, false);
     }
 
     private void runSearch(final int page, final boolean replace) {
+        final FilterParams f = filters.getValue();
+        final String type = (f != null && f.type != null) ? f.type : lastType;
+        final String location = lastLocation;
+        final int distanceKm = (f != null && f.distanceKm != null) ? f.distanceKm : 50; // default 50km
+        final String sort = (f != null && f.sort != null) ? f.sort : "distance";
+
         loading.postValue(true);
         error.postValue(null);
 
         io.execute(() -> {
             try {
                 AnimalsResponse r = repo.searchAnimals(
-                        lastType, null,  lastLocation, 50,      page, PAGE_SIZE, "distance"
+                        type,
+                        null,
+                        location,
+                        distanceKm,
+                        page,
+                        PAGE_SIZE,
+                        sort
                 );
-                currentPage = r.pagination.current_page;
 
+                // Pagination bookkeeping
+                currentPage = r.pagination != null ? r.pagination.current_page : page;
+                boolean gotEmpty = (r.animals == null || r.animals.isEmpty());
+                if (gotEmpty && page > 1) {
+                    endReached = true;
+                }
+
+                // Post results
                 if (replace) {
-                    results.postValue(r.animals);
+                    results.postValue(r.animals != null ? r.animals : Collections.<Animal>emptyList());
                 } else {
                     List<Animal> cur = results.getValue();
                     List<Animal> merged = new ArrayList<>(cur != null ? cur : Collections.<Animal>emptyList());
-                    merged.addAll(r.animals);
+                    if (r.animals != null) merged.addAll(r.animals);
                     results.postValue(merged);
                 }
             } catch (Exception e) {

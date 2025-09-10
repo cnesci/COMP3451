@@ -1,14 +1,20 @@
 package com.example.petpalfinder.network.petfinder;
 
-import com.example.petpalfinder.model.petfinder.Animal;
 import com.example.petpalfinder.model.petfinder.AnimalsResponse;
 import com.example.petpalfinder.model.petfinder.OrganizationResponse;
+
+import java.util.Map;
+
 import retrofit2.Call;
 import retrofit2.http.GET;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
+import retrofit2.http.QueryMap;
 
 public interface PetfinderApiService {
+
+    @GET("animals")
+    Call<AnimalsResponse> searchAnimals(@QueryMap Map<String, String> options);
 
     @GET("animals")
     Call<AnimalsResponse> searchAnimals(
