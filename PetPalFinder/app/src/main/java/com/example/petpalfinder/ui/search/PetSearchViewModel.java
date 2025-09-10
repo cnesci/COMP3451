@@ -14,9 +14,12 @@ import com.example.petpalfinder.repository.PetfinderRepository;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class PetSearchViewModel extends AndroidViewModel {
+    private static final int PAGE_SIZE = 100;
+
     private final PetfinderRepository repo;
     private final MutableLiveData<Boolean> loading = new MutableLiveData<>(false);
     private final MutableLiveData<String> error = new MutableLiveData<>(null);
@@ -25,6 +28,8 @@ public class PetSearchViewModel extends AndroidViewModel {
     private int currentPage = 1;
     private String lastLocation;
     private String lastType;
+
+    private final ExecutorService io = Executors.newSingleThreadExecutor();
 
     public PetSearchViewModel(@NonNull Application app) {
         super(app);
@@ -42,17 +47,21 @@ public class PetSearchViewModel extends AndroidViewModel {
         runSearch(1, true);
     }
 
-    public void nextPage() { runSearch(currentPage + 1, false); }
+    public void nextPage() {
+        runSearch(currentPage + 1, false);
+    }
 
     private void runSearch(final int page, final boolean replace) {
         loading.postValue(true);
         error.postValue(null);
-        Executors.newSingleThreadExecutor().execute(() -> {
+
+        io.execute(() -> {
             try {
                 AnimalsResponse r = repo.searchAnimals(
-                        lastType, null, lastLocation, 50, page, 20, "distance"
+                        lastType, null,  lastLocation, 50,      page, PAGE_SIZE, "distance"
                 );
                 currentPage = r.pagination.current_page;
+
                 if (replace) {
                     results.postValue(r.animals);
                 } else {
@@ -67,5 +76,11 @@ public class PetSearchViewModel extends AndroidViewModel {
                 loading.postValue(false);
             }
         });
+    }
+
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        io.shutdownNow();
     }
 }

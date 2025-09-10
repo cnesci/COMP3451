@@ -26,4 +26,12 @@ public interface PetfinderApiService {
 
     @GET("organizations/{id}")
     Call<OrganizationResponse> getOrganization(@Path("id") String id);
+
+    @GET("animals")
+    Call<AnimalsResponse> animals(
+            @Query("type") String type,
+            @Query("location") String location,   // "lat,lng" or "city, state" or postal
+            @Query("page") Integer page,          // 1-based
+            @Query("limit") Integer limit         // <= 100
+    );
 }

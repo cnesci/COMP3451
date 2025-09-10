@@ -7,4 +7,7 @@ public class Address {
     public String state;
     public String postcode;
     public String country;
+
+    public Double latitude;
+    public Double longitude;
 }
