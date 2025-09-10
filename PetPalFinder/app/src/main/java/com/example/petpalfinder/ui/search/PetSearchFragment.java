@@ -17,7 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.petpalfinder.R;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.appbar.MaterialToolbar;
 
 public class PetSearchFragment extends Fragment {
 
@@ -36,13 +36,28 @@ public class PetSearchFragment extends Fragment {
 
         RecyclerView list = v.findViewById(R.id.list);
         ProgressBar pb = v.findViewById(R.id.progress);
-        FloatingActionButton fabOpenMap = v.findViewById(R.id.fabOpenMap);
+        MaterialToolbar toolbar = v.findViewById(R.id.toolbar);
 
-        // Open Map screen when FAB is tapped
-        fabOpenMap.setOnClickListener(btn -> {
-            NavHostFragment.findNavController(PetSearchFragment.this)
-                    .navigate(R.id.mapFragment);
-        });
+        // Toolbar menu: open Map
+        if (toolbar != null) {
+            toolbar.setOnMenuItemClickListener(item -> {
+                if (item.getItemId() == R.id.action_toggle_map) {
+                    // Pass current args to Map so it mirrors the same search
+                    Bundle argsBundle = (getArguments() != null) ? getArguments() : new Bundle();
+                    PetSearchFragmentArgs args = PetSearchFragmentArgs.fromBundle(argsBundle);
+                    Bundle b = new Bundle();
+                    b.putString("type", args.getType());
+                    b.putString("location", args.getLocation());
+                    NavHostFragment.findNavController(PetSearchFragment.this)
+                            .navigate(R.id.mapFragment, b);
+                    return true;
+                }
+                return false;
+            });
+
+            toolbar.setNavigationOnClickListener(click ->
+                    NavHostFragment.findNavController(PetSearchFragment.this).navigateUp());
+        }
 
         adapter = new AnimalAdapter(a -> {
             PetSearchFragmentDirections.ActionPetSearchFragmentToPetDetailFragment dir =
@@ -64,6 +79,7 @@ public class PetSearchFragment extends Fragment {
 
         vm.results().observe(getViewLifecycleOwner(), adapter::setItems);
 
+        // Pull type/location from Safe Args; fallback to Toronto coords
         Bundle argsBundle = (getArguments() != null) ? getArguments() : new Bundle();
         PetSearchFragmentArgs args = PetSearchFragmentArgs.fromBundle(argsBundle);
         String location = args.getLocation();
@@ -73,6 +89,7 @@ public class PetSearchFragment extends Fragment {
         }
         vm.firstSearch(type, location);
 
+        // Endless scroll pagination
         list.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
