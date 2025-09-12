@@ -4,6 +4,7 @@ import com.example.petpalfinder.model.petfinder.AnimalsResponse;
 import com.example.petpalfinder.model.petfinder.OrganizationResponse;
 import com.example.petpalfinder.model.petfinder.SingleAnimalResponse;
 
+import java.util.List;
 import java.util.Map;
 
 import retrofit2.Call;
@@ -16,7 +17,7 @@ public interface PetfinderApiService {
 
     // Flexible search that takes a full filter map from FilterParams.toQueryMap()
     @GET("animals")
-    Call<AnimalsResponse> searchAnimals(@QueryMap Map<String, String> options);
+    Call<AnimalsResponse> searchAnimals(@QueryMap Map<String, String> options, @Query("type") List<String> types);
 
     // Direct animal detail
     @GET("animals/{id}")

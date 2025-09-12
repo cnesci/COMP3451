@@ -19,7 +19,11 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -98,28 +102,76 @@ public class PetfinderRepository {
             @NonNull FilterParams filters
     ) throws Exception {
 
-        // Build base query from filters (already converts km tomiles, handles genders/ages/sizes/toggles)
         Map<String, String> q = new HashMap<>(filters.toQueryMap(locationOrLatLng));
         q.put("status", "adoptable");
-        q.put("page", Integer.toString(Math.max(1, page)));
-        q.put("limit", Integer.toString(Math.max(1, Math.min(100, limit))));
-        if (filters.sort != null && !filters.sort.isEmpty()) {
-            q.put("sort", filters.sort);
+        q.put("sort", filters.sort != null ? filters.sort : "distance");
+
+        // Extract the list of selected types from the filters
+        List<String> typesToQuery = new ArrayList<>();
+        if (filters.types != null && !filters.types.isEmpty()) {
+            typesToQuery.addAll(filters.types);
+        } else if (filters.type != null && !filters.type.trim().isEmpty()) {
+            typesToQuery.add(filters.type.trim());
         }
 
-        // Log the outgoing query to help debug
-        Log.d(TAG, "GET /animals " + q.toString());
+        if (typesToQuery.size() <= 1) {
+            q.put("page", Integer.toString(Math.max(1, page)));
+            q.put("limit", Integer.toString(Math.max(1, Math.min(100, limit))));
 
-        retrofit2.Response<AnimalsResponse> resp = api.searchAnimals(q).execute();
+            Log.d(TAG, "GET /animals (single type) " + q.toString() + " types=" + typesToQuery);
+            retrofit2.Response<AnimalsResponse> resp = api.searchAnimals(q, typesToQuery).execute();
 
-        if (!resp.isSuccessful()) {
-            String errBody = safeBody(resp);
-            Log.e(TAG, "HTTP " + resp.code() + " searching animals – " + errBody);
-            throw new IOException("Petfinder search failed: " + resp.code());
+            if (!resp.isSuccessful()) {
+                String errBody = safeBody(resp);
+                Log.e(TAG, "HTTP " + resp.code() + " searching animals – " + errBody);
+                throw new IOException("Petfinder search failed: " + resp.code());
+            }
+            AnimalsResponse body = resp.body();
+            return (body != null) ? body : new AnimalsResponse();
         }
 
-        AnimalsResponse body = resp.body();
-        return (body != null) ? body : new AnimalsResponse(); // empty-safe
+        q.put("limit", "100"); // Fetch up to 100 of each selected type
+        q.put("page", "1");    // Always get the first page for each type
+
+        Log.d(TAG, "Performing multi-type search for: " + typesToQuery);
+        List<Animal> combinedAnimals = new ArrayList<>();
+
+        for (String type : typesToQuery) {
+            try {
+                List<String> singleType = Collections.singletonList(type);
+                Log.d(TAG, "GET /animals (part of multi-type) " + q.toString() + " type=" + type);
+                // Call the API for just one type at a time
+                retrofit2.Response<AnimalsResponse> resp = api.searchAnimals(q, singleType).execute();
+
+                if (resp.isSuccessful() && resp.body() != null && resp.body().animals != null) {
+                    combinedAnimals.addAll(resp.body().animals);
+                } else {
+                    Log.w(TAG, "Failed to get results for type '" + type + "': HTTP " + resp.code());
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error fetching animals for type '" + type + "'", e);
+            }
+        }
+
+        // Sort the combined list to ensure a consistent order (e.g., by distance)
+        if ("distance".equals(filters.sort)) {
+            combinedAnimals.sort(Comparator.comparing(
+                    animal -> animal.distance != null ? animal.distance : Double.MAX_VALUE
+            ));
+        }
+
+        // Create a new response object containing the merged list of animals
+        AnimalsResponse mergedResponse = new AnimalsResponse();
+        mergedResponse.animals = combinedAnimals;
+
+        // Signal that only one page is available
+        com.example.petpalfinder.model.petfinder.Pagination pagination = new com.example.petpalfinder.model.petfinder.Pagination();
+        pagination.current_page = 1;
+        pagination.total_pages = 1; // This tells the ViewModel there are no more pages.
+        pagination.total_count = combinedAnimals.size();
+        mergedResponse.pagination = pagination;
+
+        return mergedResponse;
     }
 
     public Animal getAnimal(long id) throws IOException {

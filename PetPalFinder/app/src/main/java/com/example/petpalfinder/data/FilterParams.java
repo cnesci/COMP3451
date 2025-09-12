@@ -112,20 +112,11 @@ public class FilterParams {
     }
 
     /** Build the Petfinder query. Assumes server accepts comma lists for multi-selects. */
-    // FilterParams.java  (only the toQueryMap method changed)
     public Map<String, String> toQueryMap(@Nullable String locationOrLatLng) {
         Map<String, String> q = new HashMap<>();
 
         if (locationOrLatLng != null && !locationOrLatLng.trim().isEmpty()) {
             q.put("location", locationOrLatLng.trim());
-        }
-
-        // Use exactly one type if available; multiple types are handled in the repository.
-        List<String> effectiveTypes = !types.isEmpty()
-                ? types
-                : (type != null ? Collections.singletonList(type) : Collections.emptyList());
-        if (effectiveTypes.size() == 1) {
-            q.put("type", effectiveTypes.get(0).toLowerCase(Locale.US));
         }
 
         if (!genders.isEmpty()) q.put("gender", String.join(",", lower(genders)));

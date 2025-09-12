@@ -20,6 +20,7 @@ public class PetSearchViewModel extends AndroidViewModel {
     private final MutableLiveData<FilterParams> filters = new MutableLiveData<>(FilterParams.defaults(null));
 
     private int currentPage = 1;
+    private int totalPages = 1;
     private String lastLocation = null;
 
     private final ExecutorService io = Executors.newSingleThreadExecutor();
@@ -69,10 +70,15 @@ public class PetSearchViewModel extends AndroidViewModel {
 
         filters.setValue(f);
         currentPage = 1;
+        totalPages = 1;
         runSearch(1, true);
     }
 
-    public void nextPage() { runSearch(currentPage + 1, false); }
+    public void nextPage() {
+        if (loading.getValue() != null && loading.getValue()) return; // Don't fetch if already loading
+        if (currentPage >= totalPages) return;
+        runSearch(currentPage + 1, false);
+    }
 
     private void runSearch(final int page, final boolean replace) {
         loading.postValue(true);
@@ -84,8 +90,14 @@ public class PetSearchViewModel extends AndroidViewModel {
         io.execute(() -> {
             try {
                 AnimalsResponse r = repo.searchAnimals(location, page, PAGE_SIZE, f);
-                currentPage = (r != null && r.pagination != null && r.pagination.current_page > 0)
-                        ? r.pagination.current_page : page;
+                if (r != null && r.pagination != null) {
+                    currentPage = Math.max(1, r.pagination.current_page);
+                    totalPages = Math.max(1, r.pagination.total_pages);
+                } else {
+                    // If pagination info is missing, assume we are on the last page.
+                    currentPage = page;
+                    totalPages = page;
+                }
 
                 List<Animal> newList = (r != null && r.animals != null) ? r.animals : Collections.emptyList();
                 if (replace) {
