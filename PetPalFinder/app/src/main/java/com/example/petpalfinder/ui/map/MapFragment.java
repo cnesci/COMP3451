@@ -229,7 +229,9 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
                 geocodeAndShow(style, animals);
             });
 
-            sharedVm.getFilters().observe(getViewLifecycleOwner(), f -> {});
+            sharedVm.getFilters().observe(getViewLifecycleOwner(), f -> {
+                cameraFittedOnce = false;
+            });
 
             attachTapHandlers();
         });

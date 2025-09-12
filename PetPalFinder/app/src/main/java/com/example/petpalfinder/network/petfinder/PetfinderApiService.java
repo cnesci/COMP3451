@@ -2,6 +2,7 @@ package com.example.petpalfinder.network.petfinder;
 
 import com.example.petpalfinder.model.petfinder.AnimalsResponse;
 import com.example.petpalfinder.model.petfinder.OrganizationResponse;
+import com.example.petpalfinder.model.petfinder.SingleAnimalResponse;
 
 import java.util.Map;
 
@@ -13,31 +14,15 @@ import retrofit2.http.QueryMap;
 
 public interface PetfinderApiService {
 
+    // Flexible search that takes a full filter map from FilterParams.toQueryMap()
     @GET("animals")
     Call<AnimalsResponse> searchAnimals(@QueryMap Map<String, String> options);
 
-    @GET("animals")
-    Call<AnimalsResponse> searchAnimals(
-            @Query("type") String type,
-            @Query("breed") String breed,
-            @Query("location") String location,        // "lat,lon" or postal code
-            @Query("distance") Integer distanceMiles,  // 0..500
-            @Query("page") Integer page,
-            @Query("limit") Integer limit,
-            @Query("sort") String sort                 // "distance","-distance","recent"
-    );
-
+    // Direct animal detail
     @GET("animals/{id}")
-    Call<com.example.petpalfinder.model.petfinder.SingleAnimalResponse> getAnimal(@Path("id") long id);
+    Call<SingleAnimalResponse> getAnimal(@Path("id") long id);
 
+    // Organization detail
     @GET("organizations/{id}")
     Call<OrganizationResponse> getOrganization(@Path("id") String id);
-
-    @GET("animals")
-    Call<AnimalsResponse> animals(
-            @Query("type") String type,
-            @Query("location") String location,   // "lat,lng" or "city, state" or postal
-            @Query("page") Integer page,          // 1-based
-            @Query("limit") Integer limit         // <= 100
-    );
 }

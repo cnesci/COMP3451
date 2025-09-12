@@ -46,12 +46,10 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
         ProgressBar pb = v.findViewById(R.id.progress);
         MaterialToolbar toolbar = v.findViewById(R.id.toolbar);
 
-        // Toolbar menu: Map + Filters
         if (toolbar != null) {
             toolbar.setOnMenuItemClickListener(item -> {
                 int id = item.getItemId();
                 if (id == R.id.action_toggle_map) {
-                    // Pass current args to Map so it mirrors the same search
                     Bundle argsBundle = (getArguments() != null) ? getArguments() : new Bundle();
                     PetSearchFragmentArgs args = PetSearchFragmentArgs.fromBundle(argsBundle);
                     Bundle b = new Bundle();
@@ -61,12 +59,10 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
                             .navigate(R.id.mapFragment, b);
                     return true;
                 } else if (id == R.id.action_filters) {
-                    // Open filter bottom sheet with current (or default) filters
                     Bundle argsBundle = (getArguments() != null) ? getArguments() : new Bundle();
                     String typeFromArgs = PetSearchFragmentArgs.fromBundle(argsBundle).getType();
                     FilterParams cur = vm.getFilters().getValue();
                     if (cur == null) {
-                        // seed from saved prefs or defaults
                         cur = FilterParams.fromPrefs(prefs.getAll(), typeFromArgs);
                         if (cur.type == null) cur.type = typeFromArgs;
                     }
@@ -102,23 +98,19 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
 
         vm.results().observe(getViewLifecycleOwner(), adapter::setItems);
 
-        // Pull type/location from Safe Args; fallback to Toronto coords
         Bundle argsBundle = (getArguments() != null) ? getArguments() : new Bundle();
         PetSearchFragmentArgs args = PetSearchFragmentArgs.fromBundle(argsBundle);
         String location = args.getLocation();
         String type = args.getType();
         if (location == null || location.isEmpty()) {
-            location = "43.6532,-79.3832"; // Toronto fallback
+            location = "43.6532,-79.3832";
         }
-
-        // Kick off initial search
-        vm.firstSearch(type, location);
 
         FilterParams saved = FilterParams.fromPrefs(prefs.getAll(), type);
         if (saved.type == null) saved.type = type;
         vm.applyFilters(saved);
+        vm.firstSearch(type, location);
 
-        // Endless scroll pagination
         list.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
@@ -135,17 +127,12 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
 
     @Override
     public void onFiltersApplied(FilterParams params) {
-        // Apply to VM
         vm.applyFilters(params);
-
-        // Persist
         SharedPreferences.Editor e = prefs.edit();
         for (Map.Entry<String, String> en : params.toPrefs().entrySet()) {
             e.putString(en.getKey(), en.getValue());
         }
         e.apply();
-
-        // Scroll to top
         if (list != null) list.scrollToPosition(0);
     }
 }

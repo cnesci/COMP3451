@@ -22,33 +22,36 @@
         android:text="Gender"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
         app:layout_constraintTop_toBottomOf="@id/title"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginTop="16dp"/>
+        app:layout_constraintStart_toStartOf="parent"/>
 
     <com.google.android.material.chip.ChipGroup
         android:id="@+id/chipGroupGender"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        app:singleSelection="true"
+        app:singleSelection="false"
+        app:selectionRequired="false"
         app:layout_constraintTop_toBottomOf="@id/labelGender"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
         <com.google.android.material.chip.Chip
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Male"
             android:checkable="true"
-            app:checkedIconVisible="false"
+            app:checkedIconVisible="true"
+            android:text="Male"
             android:tag="male"/>
 
         <com.google.android.material.chip.Chip
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Female"
             android:checkable="true"
-            app:checkedIconVisible="false"
+            app:checkedIconVisible="true"
+            android:text="Female"
             android:tag="female"/>
     </com.google.android.material.chip.ChipGroup>
 
@@ -58,45 +61,54 @@
         android:text="Age"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
         app:layout_constraintTop_toBottomOf="@id/chipGroupGender"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginTop="16dp"/>
+        app:layout_constraintStart_toStartOf="parent"/>
 
     <com.google.android.material.chip.ChipGroup
         android:id="@+id/chipGroupAge"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        app:singleSelection="true"
+        app:singleSelection="false"
+        app:selectionRequired="false"
         app:layout_constraintTop_toBottomOf="@id/labelAge"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
         <com.google.android.material.chip.Chip
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Baby"
             android:checkable="true"
+            app:checkedIconVisible="true"
+            android:text="Baby"
             android:tag="baby"/>
 
         <com.google.android.material.chip.Chip
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Young"
             android:checkable="true"
+            app:checkedIconVisible="true"
+            android:text="Young"
             android:tag="young"/>
 
         <com.google.android.material.chip.Chip
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Adult"
             android:checkable="true"
+            app:checkedIconVisible="true"
+            android:text="Adult"
             android:tag="adult"/>
 
         <com.google.android.material.chip.Chip
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Senior"
             android:checkable="true"
+            app:checkedIconVisible="true"
+            android:text="Senior"
             android:tag="senior"/>
     </com.google.android.material.chip.ChipGroup>
 
@@ -106,45 +118,54 @@
         android:text="Size"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
         app:layout_constraintTop_toBottomOf="@id/chipGroupAge"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginTop="16dp"/>
+        app:layout_constraintStart_toStartOf="parent"/>
 
     <com.google.android.material.chip.ChipGroup
         android:id="@+id/chipGroupSize"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        app:singleSelection="true"
+        app:singleSelection="false"
+        app:selectionRequired="false"
         app:layout_constraintTop_toBottomOf="@id/labelSize"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
         <com.google.android.material.chip.Chip
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Small"
             android:checkable="true"
+            app:checkedIconVisible="true"
+            android:text="Small"
             android:tag="small"/>
 
         <com.google.android.material.chip.Chip
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Medium"
             android:checkable="true"
+            app:checkedIconVisible="true"
+            android:text="Medium"
             android:tag="medium"/>
 
         <com.google.android.material.chip.Chip
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Large"
             android:checkable="true"
+            app:checkedIconVisible="true"
+            android:text="Large"
             android:tag="large"/>
 
         <com.google.android.material.chip.Chip
+            style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="XL"
             android:checkable="true"
+            app:checkedIconVisible="true"
+            android:text="XL"
             android:tag="xlarge"/>
     </com.google.android.material.chip.ChipGroup>
 
@@ -154,10 +175,10 @@
         android:text="Good with children"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
         app:layout_constraintTop_toBottomOf="@id/chipGroupSize"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="16dp"/>
+        app:layout_constraintEnd_toEndOf="parent"/>
 
     <com.google.android.material.materialswitch.MaterialSwitch
         android:id="@+id/switchDogs"
@@ -183,48 +204,142 @@
         android:text="Distance (km)"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
         app:layout_constraintTop_toBottomOf="@id/switchCats"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginTop="16dp"/>
+        app:layout_constraintStart_toStartOf="parent"/>
 
     <com.google.android.material.slider.Slider
         android:id="@+id/sliderDistance"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
         android:value="50"
         android:valueFrom="5"
         android:valueTo="200"
         android:stepSize="5"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
         app:layout_constraintTop_toBottomOf="@id/labelDistance"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
+    <!-- Type -->
+    <TextView
+        android:id="@+id/labelType"
+        android:text="Type"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/sliderDistance"
+        app:layout_constraintStart_toStartOf="parent"/>
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chipGroupType"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:singleSelection="false"
+        app:selectionRequired="false"
+        app:layout_constraintTop_toBottomOf="@id/labelType"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.chip.Chip
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checkable="true"
+            app:checkedIconVisible="true"
+            android:text="Dog"
+            android:tag="dog"/>
+
+        <com.google.android.material.chip.Chip
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checkable="true"
+            app:checkedIconVisible="true"
+            android:text="Cat"
+            android:tag="cat"/>
+
+        <com.google.android.material.chip.Chip
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checkable="true"
+            app:checkedIconVisible="true"
+            android:text="Rabbit"
+            android:tag="rabbit"/>
+
+        <com.google.android.material.chip.Chip
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checkable="true"
+            app:checkedIconVisible="true"
+            android:text="Small Furry"
+            android:tag="small-furry"/>
+
+        <com.google.android.material.chip.Chip
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checkable="true"
+            app:checkedIconVisible="true"
+            android:text="Horse"
+            android:tag="horse"/>
+
+        <com.google.android.material.chip.Chip
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checkable="true"
+            app:checkedIconVisible="true"
+            android:text="Bird"
+            android:tag="bird"/>
+
+        <com.google.android.material.chip.Chip
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checkable="true"
+            app:checkedIconVisible="true"
+            android:text="Scales, Fins &amp; Other"
+            android:tag="scales-fins-other"/>
+
+        <com.google.android.material.chip.Chip
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checkable="true"
+            app:checkedIconVisible="true"
+            android:text="Barnyard"
+            android:tag="barnyard"/>
+    </com.google.android.material.chip.ChipGroup>
+
     <!-- Buttons -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnClear"
-        android:text="Clear"
         style="@style/Widget.Material3.Button.OutlinedButton"
+        android:text="Clear"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@id/sliderDistance"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="8dp"
+        app:layout_constraintTop_toBottomOf="@id/chipGroupType"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@id/btnApply"
         app:layout_constraintHorizontal_chainStyle="packed"
-        app:layout_constraintHorizontal_weight="1"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="8dp"/>
+        app:layout_constraintHorizontal_weight="1"/>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnApply"
         android:text="Apply"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@id/sliderDistance"
+        android:layout_marginTop="16dp"
+        android:layout_marginStart="8dp"
+        app:layout_constraintTop_toBottomOf="@id/chipGroupType"
         app:layout_constraintStart_toEndOf="@id/btnClear"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_chainStyle="packed"
-        app:layout_constraintHorizontal_weight="1"
-        android:layout_marginTop="16dp"
-        android:layout_marginStart="8dp"/>
+        app:layout_constraintHorizontal_weight="1"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

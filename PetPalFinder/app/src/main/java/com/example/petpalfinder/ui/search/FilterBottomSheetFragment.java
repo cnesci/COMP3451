@@ -13,6 +13,11 @@ import com.example.petpalfinder.databinding.SheetFiltersBinding;
 import com.example.petpalfinder.data.FilterParams;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
 
@@ -28,10 +33,14 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
         FilterBottomSheetFragment f = new FilterBottomSheetFragment();
         Bundle b = new Bundle();
         b.putString("type", current.type);
-        b.putString("gender", current.gender);
-        b.putString("age", current.age);
-        b.putString("size", current.size);
-        b.putBoolean("gwk", current.goodWithKids);
+        // multi-select
+        b.putStringArrayList("types", new ArrayList<>(current.types));
+
+        b.putStringArrayList("genders", new ArrayList<>(current.genders));
+        b.putStringArrayList("ages",    new ArrayList<>(current.ages));
+        b.putStringArrayList("sizes",   new ArrayList<>(current.sizes));
+
+        b.putBoolean("gwk", current.goodWithChildren);
         b.putBoolean("gwd", current.goodWithDogs);
         b.putBoolean("gwc", current.goodWithCats);
         b.putInt("distKm", current.distanceKm == null ? 50 : current.distanceKm);
@@ -54,32 +63,37 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
     @Override public void onViewCreated(@NonNull View v, @Nullable Bundle s) {
         super.onViewCreated(v, s);
 
-        // Build a working copy
         current = new FilterParams();
         Bundle args = getArguments() == null ? new Bundle() : getArguments();
-        current.type = args.getString("type", null);
-        current.gender = nullIfEmpty(args.getString("gender", null));
-        current.age = nullIfEmpty(args.getString("age", null));
-        current.size = nullIfEmpty(args.getString("size", null));
-        current.goodWithKids = args.getBoolean("gwk", false);
+
+        current.type  = args.getString("type", null); // legacy single
+        current.types = new ArrayList<>(safeList(args.getStringArrayList("types")));
+
+        current.genders = new ArrayList<>(safeList(args.getStringArrayList("genders")));
+        current.ages    = new ArrayList<>(safeList(args.getStringArrayList("ages")));
+        current.sizes   = new ArrayList<>(safeList(args.getStringArrayList("sizes")));
+
+        current.goodWithChildren = args.getBoolean("gwk", false);
         current.goodWithDogs = args.getBoolean("gwd", false);
         current.goodWithCats = args.getBoolean("gwc", false);
-        current.distanceKm = args.getInt("distKm", 50);
+        current.distanceKm   = args.getInt("distKm", 50);
         current.sort = "distance";
 
-        // Preselect chips/switches
-        preselect(binding.chipGroupGender, current.gender);
-        preselect(binding.chipGroupAge, current.age);
-        preselect(binding.chipGroupSize, current.size);
-        binding.switchKids.setChecked(current.goodWithKids);
+        preselectMulti(binding.chipGroupType,   current.types);
+        preselectMulti(binding.chipGroupGender, current.genders);
+        preselectMulti(binding.chipGroupAge,    current.ages);
+        preselectMulti(binding.chipGroupSize,   current.sizes);
+
+        binding.switchKids.setChecked(current.goodWithChildren);
         binding.switchDogs.setChecked(current.goodWithDogs);
         binding.switchCats.setChecked(current.goodWithCats);
         binding.sliderDistance.setValue(current.distanceKm);
 
         binding.btnClear.setOnClickListener(v1 -> {
-            binding.chipGroupGender.clearCheck();
-            binding.chipGroupAge.clearCheck();
-            binding.chipGroupSize.clearCheck();
+            clearGroup(binding.chipGroupType);
+            clearGroup(binding.chipGroupGender);
+            clearGroup(binding.chipGroupAge);
+            clearGroup(binding.chipGroupSize);
             binding.switchKids.setChecked(false);
             binding.switchDogs.setChecked(false);
             binding.switchCats.setChecked(false);
@@ -87,42 +101,54 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
         });
 
         binding.btnApply.setOnClickListener(v12 -> {
-            current.gender = selectedKey(binding.chipGroupGender);
-            current.age    = selectedKey(binding.chipGroupAge);
-            current.size   = selectedKey(binding.chipGroupSize);
-            current.goodWithKids = binding.switchKids.isChecked();
+            current.types   = selectedTags(binding.chipGroupType);
+            current.genders = selectedTags(binding.chipGroupGender);
+            current.ages    = selectedTags(binding.chipGroupAge);
+            current.sizes   = selectedTags(binding.chipGroupSize);
+
+            current.goodWithChildren = binding.switchKids.isChecked();
             current.goodWithDogs = binding.switchDogs.isChecked();
             current.goodWithCats = binding.switchCats.isChecked();
             current.distanceKm   = (int) binding.sliderDistance.getValue();
+
             if (listener != null) listener.onFiltersApplied(current);
             dismiss();
         });
     }
 
-    private void preselect(ViewGroup chipGroup, String key) {
-        if (key == null) return;
+    private static List<String> safeList(@Nullable List<String> in) {
+        return in == null ? new ArrayList<>() : in;
+    }
+
+    private static void clearGroup(ChipGroup cg) {
+        for (int i = 0; i < cg.getChildCount(); i++) {
+            View c = cg.getChildAt(i);
+            if (c instanceof Chip) ((Chip) c).setChecked(false);
+        }
+    }
+
+    private static void preselectMulti(ViewGroup chipGroup, List<String> keys) {
+        if (keys == null || keys.isEmpty()) return;
         for (int i = 0; i < chipGroup.getChildCount(); i++) {
             View c = chipGroup.getChildAt(i);
             if (c instanceof Chip) {
                 Object tag = c.getTag();
-                if (tag != null && tag.equals(key)) {
+                if (tag != null && keys.contains(String.valueOf(tag))) {
                     ((Chip) c).setChecked(true);
-                    break;
                 }
             }
         }
     }
 
-    private String selectedKey(ViewGroup chipGroup) {
+    private static ArrayList<String> selectedTags(ViewGroup chipGroup) {
+        ArrayList<String> out = new ArrayList<>();
         for (int i = 0; i < chipGroup.getChildCount(); i++) {
             View c = chipGroup.getChildAt(i);
             if (c instanceof Chip && ((Chip) c).isChecked()) {
                 Object tag = c.getTag();
-                return tag == null ? null : String.valueOf(tag);
+                if (tag != null) out.add(String.valueOf(tag));
             }
         }
-        return null;
+        return out;
     }
-
-    private String nullIfEmpty(String s) { return (s == null || s.trim().isEmpty()) ? null : s; }
 }
