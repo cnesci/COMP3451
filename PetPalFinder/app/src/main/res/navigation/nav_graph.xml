@@ -18,7 +18,7 @@
         android:name="com.example.petpalfinder.ui.search.PetSearchFragment"
         android:label="Nearby Pets">
         <argument android:name="location" app:argType="string" android:defaultValue=""/>
-        <argument android:name="type" app:argType="string" android:defaultValue="dog"/>
+        <argument android:name="type" app:argType="string" app:nullable="true"/>
 
         <action
             android:id="@+id/action_petSearchFragment_to_petDetailFragment"

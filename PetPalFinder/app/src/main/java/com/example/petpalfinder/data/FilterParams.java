@@ -41,11 +41,13 @@ public class FilterParams {
         if (typeArg != null && !typeArg.trim().isEmpty()) {
             f.type = typeArg.trim();
             f.types.add(f.type.toLowerCase(Locale.US));
-        }
+            } else {
+                    f.type = null;
+            }
         if (f.distanceKm == null) f.distanceKm = 50; // sensible default
-        f.syncAliases();
         return f;
     }
+
 
     public static FilterParams fromPrefs(Map<String, ?> prefs, @Nullable String typeArg) {
         FilterParams f = defaults(typeArg);

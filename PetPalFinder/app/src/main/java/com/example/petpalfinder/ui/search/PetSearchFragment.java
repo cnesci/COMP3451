@@ -50,21 +50,18 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
             toolbar.setOnMenuItemClickListener(item -> {
                 int id = item.getItemId();
                 if (id == R.id.action_toggle_map) {
+                    // Keep passing through the original args for location only.
                     Bundle argsBundle = (getArguments() != null) ? getArguments() : new Bundle();
                     PetSearchFragmentArgs args = PetSearchFragmentArgs.fromBundle(argsBundle);
                     Bundle b = new Bundle();
-                    b.putString("type", args.getType());
                     b.putString("location", args.getLocation());
                     NavHostFragment.findNavController(PetSearchFragment.this)
                             .navigate(R.id.mapFragment, b);
                     return true;
                 } else if (id == R.id.action_filters) {
-                    Bundle argsBundle = (getArguments() != null) ? getArguments() : new Bundle();
-                    String typeFromArgs = PetSearchFragmentArgs.fromBundle(argsBundle).getType();
                     FilterParams cur = vm.getFilters().getValue();
                     if (cur == null) {
-                        cur = FilterParams.fromPrefs(prefs.getAll(), typeFromArgs);
-                        if (cur.type == null) cur.type = typeFromArgs;
+                        cur = FilterParams.fromPrefs(prefs.getAll(), /*typeArg=*/null);
                     }
                     FilterBottomSheetFragment
                             .newInstance(cur)
@@ -98,18 +95,18 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
 
         vm.results().observe(getViewLifecycleOwner(), adapter::setItems);
 
+        // ----- Initialization: set location, then apply saved filters (no type seeding) -----
         Bundle argsBundle = (getArguments() != null) ? getArguments() : new Bundle();
         PetSearchFragmentArgs args = PetSearchFragmentArgs.fromBundle(argsBundle);
         String location = args.getLocation();
-        String type = args.getType();
         if (location == null || location.isEmpty()) {
             location = "43.6532,-79.3832";
         }
 
-        FilterParams saved = FilterParams.fromPrefs(prefs.getAll(), type);
-        if (saved.type == null) saved.type = type;
+        vm.firstSearch(/*type=*/null, location);
+
+        FilterParams saved = FilterParams.fromPrefs(prefs.getAll(), /*typeArg=*/null);
         vm.applyFilters(saved);
-        vm.firstSearch(type, location);
 
         list.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override

@@ -39,7 +39,7 @@ public class HomeFragment extends Fragment {
         if (title != null) title.setText("Pet Pal Finder");
         if (subtitle != null) subtitle.setText("Geocoding test…");
 
-        // Try a sample address (replace with user input later)
+        // Try a sample address
         String testAddress = "Toronto, ON";
 
         repo.forwardSimple(testAddress, new GeocodingRepository.SimpleHandler() {
@@ -53,7 +53,7 @@ public class HomeFragment extends Fragment {
                 String location = String.format(Locale.US, "%.5f,%.5f", lat, lng);
 
                 HomeFragmentDirections.ActionHomeFragmentToPetSearchFragment dir =
-                        HomeFragmentDirections.actionHomeFragmentToPetSearchFragment();
+                        HomeFragmentDirections.actionHomeFragmentToPetSearchFragment("");
                 dir.setLocation(location);
                 dir.setType("dog");
 

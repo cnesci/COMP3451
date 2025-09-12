@@ -36,7 +36,6 @@ public class PetSearchViewModel extends AndroidViewModel {
 
     public void firstSearch(String type, String location) {
         FilterParams f = (filters.getValue() != null) ? filters.getValue() : FilterParams.defaults(type);
-
         if ((f.types == null || f.types.isEmpty()) && type != null && !type.isEmpty()) {
             f.types = new ArrayList<>(List.of(type));
         }
