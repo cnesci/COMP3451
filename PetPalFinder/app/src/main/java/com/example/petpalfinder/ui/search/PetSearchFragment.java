@@ -50,18 +50,20 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
             toolbar.setOnMenuItemClickListener(item -> {
                 int id = item.getItemId();
                 if (id == R.id.action_toggle_map) {
-                    // Keep passing through the original args for location only.
                     Bundle argsBundle = (getArguments() != null) ? getArguments() : new Bundle();
                     PetSearchFragmentArgs args = PetSearchFragmentArgs.fromBundle(argsBundle);
+
                     Bundle b = new Bundle();
                     b.putString("location", args.getLocation());
                     NavHostFragment.findNavController(PetSearchFragment.this)
                             .navigate(R.id.mapFragment, b);
                     return true;
+
                 } else if (id == R.id.action_filters) {
+                    // Open with current VM filters; if null, load from prefs WITHOUT seeding a type
                     FilterParams cur = vm.getFilters().getValue();
                     if (cur == null) {
-                        cur = FilterParams.fromPrefs(prefs.getAll(), /*typeArg=*/null);
+                        cur = FilterParams.fromPrefs(prefs.getAll(), /*typeArg*/ null);
                     }
                     FilterBottomSheetFragment
                             .newInstance(cur)
@@ -95,18 +97,23 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
 
         vm.results().observe(getViewLifecycleOwner(), adapter::setItems);
 
-        // ----- Initialization: set location, then apply saved filters (no type seeding) -----
+        // --- Initial load logic ---
         Bundle argsBundle = (getArguments() != null) ? getArguments() : new Bundle();
         PetSearchFragmentArgs args = PetSearchFragmentArgs.fromBundle(argsBundle);
+
         String location = args.getLocation();
         if (location == null || location.isEmpty()) {
-            location = "43.6532,-79.3832";
+            location = "43.6532,-79.3832"; // fallback
         }
 
-        vm.firstSearch(/*type=*/null, location);
+        if (vm.getFilters().getValue() == null) {
+            // Load from prefs with no implicit "type" seed
+            FilterParams saved = FilterParams.fromPrefs(prefs.getAll(), /*typeArg*/ null);
+            vm.applyFilters(saved);
+        }
 
-        FilterParams saved = FilterParams.fromPrefs(prefs.getAll(), /*typeArg=*/null);
-        vm.applyFilters(saved);
+        // Kick off/refresh search using existing filters; pass null type to avoid seeding
+        vm.firstSearch(/*type*/ null, location);
 
         list.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
@@ -125,11 +132,15 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
     @Override
     public void onFiltersApplied(FilterParams params) {
         vm.applyFilters(params);
+
         SharedPreferences.Editor e = prefs.edit();
         for (Map.Entry<String, String> en : params.toPrefs().entrySet()) {
+            if ("type".equals(en.getKey())) continue; // skip legacy single-type key
             e.putString(en.getKey(), en.getValue());
         }
+        e.remove("type"); // ensure old value can't leak back in
         e.apply();
+
         if (list != null) list.scrollToPosition(0);
     }
 }
