@@ -5,7 +5,11 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Looper;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -13,7 +17,12 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
@@ -28,12 +37,15 @@ import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.fragment.NavHostFragment;
 
+import com.bumptech.glide.Glide;
 import com.example.petpalfinder.R;
 import com.example.petpalfinder.data.FilterParams;
 import com.example.petpalfinder.model.petfinder.Animal;
+import com.example.petpalfinder.model.petfinder.Photo;
 import com.example.petpalfinder.ui.search.FilterBottomSheetFragment;
 import com.example.petpalfinder.ui.search.PetSearchViewModel;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.textfield.TextInputEditText;
 import com.mapbox.bindgen.Value;
 import com.mapbox.geojson.Feature;
 import com.mapbox.geojson.FeatureCollection;
@@ -52,6 +64,7 @@ import com.mapbox.maps.plugin.gestures.GesturesUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -76,56 +89,124 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
 
     private SharedPreferences prefs;
 
-    private final ActivityResultLauncher<String[]> locationPermsLauncher =
-            registerForActivityResult(
-                    new ActivityResultContracts.RequestMultiplePermissions(),
-                    result -> centerOnUserIfPermitted()
-            );
+    private View infoWindow;
+    private ImageView infoWindowImage;
+    private TextView infoWindowDetails;
+    private Button infoWindowButton;
+    private TextView infoWindowName;
 
-    @Nullable @Override
+    // Updated permission launcher
+    private ActivityResultLauncher<String[]> locationPermsLauncher;
+
+    @Nullable
+    @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
         destroyed.set(false);
         exec = Executors.newSingleThreadExecutor();
+
+        // Initialize the permissions launcher
+        locationPermsLauncher =
+                registerForActivityResult(
+                        new ActivityResultContracts.RequestMultiplePermissions(),
+                        result -> {
+                            Boolean fineGranted = result.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false);
+                            Boolean coarseGranted = result.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false);
+                            if (fineGranted || coarseGranted) {
+                                useCurrentDeviceLocation();
+                            } else {
+                                Toast.makeText(getContext(), "Location permission denied", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+
         return inflater.inflate(R.layout.fragment_map, container, false);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle s) {
         super.onViewCreated(view, s);
+
+        // --- Standard View Setup ---
         mapView = view.findViewById(R.id.mapView);
         btnMyLocation = view.findViewById(R.id.btnMyLocation);
-        btnListView   = view.findViewById(R.id.btnListView);
-        btnFilters    = view.findViewById(R.id.btnFilters);
-        toolbar       = view.findViewById(R.id.toolbar);
+        btnListView = view.findViewById(R.id.btnListView);
+        btnFilters = view.findViewById(R.id.btnFilters);
+        toolbar = view.findViewById(R.id.toolbar);
+        infoWindow = view.findViewById(R.id.info_window);
+        infoWindowImage = infoWindow.findViewById(R.id.info_window_image);
+        infoWindowDetails = infoWindow.findViewById(R.id.info_window_details);
+        infoWindowButton = infoWindow.findViewById(R.id.info_window_button);
+        infoWindowName = infoWindow.findViewById(R.id.info_window_name);
 
-        prefs = requireContext().getSharedPreferences("filters", Context.MODE_PRIVATE);
+        // --- NEW Location Bar Setup ---
+        View locationBar = view.findViewById(R.id.location_bar);
+        TextInputEditText locationEditText = locationBar.findViewById(R.id.location_edit_text);
+        ImageButton myLocationButton = locationBar.findViewById(R.id.my_location_button);
 
+        // Use the dedicated location prefs file
+        prefs = requireContext().getSharedPreferences("location_prefs", Context.MODE_PRIVATE);
+
+        sharedVm = new ViewModelProvider(requireActivity()).get(PetSearchViewModel.class);
+
+        // --- Back Button Handler ---
         requireActivity().getOnBackPressedDispatcher().addCallback(
                 getViewLifecycleOwner(),
                 new OnBackPressedCallback(true) {
-                    @Override public void handleOnBackPressed() {
+                    @Override
+                    public void handleOnBackPressed() {
                         NavHostFragment.findNavController(MapFragment.this).navigateUp();
                     }
                 });
 
-        if (btnMyLocation != null) btnMyLocation.setOnClickListener(v -> ensureLocationThenCenter());
-        if (btnListView   != null) btnListView.setOnClickListener(v ->
+        // --- Initial Location Search ---
+        if (sharedVm.results().getValue() == null || sharedVm.results().getValue().isEmpty()) {
+            String lastQuery = prefs.getString("last_query", "Bradford West Gwillimbury, ON");
+            sharedVm.searchAtLocation(lastQuery);
+        }
+
+        // --- ViewModel Observers ---
+        sharedVm.getFormattedLocation().observe(getViewLifecycleOwner(), formatted -> {
+            locationEditText.setText(formatted);
+            // Save the latest location
+            prefs.edit()
+                    .putString("last_query", sharedVm.lastLocation)
+                    .putString("last_formatted", formatted)
+                    .apply();
+        });
+
+        // --- UI Listeners (Location Bar) ---
+        myLocationButton.setOnClickListener(v -> checkPermissionsAndUseLocation());
+        locationEditText.setOnEditorActionListener((textView, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                String query = textView.getText().toString().trim();
+                if (!query.isEmpty()) {
+                    sharedVm.searchAtLocation(query);
+                    InputMethodManager imm = (InputMethodManager) requireContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+                    imm.hideSoftInputFromWindow(textView.getWindowToken(), 0);
+                    textView.clearFocus();
+                }
+                return true;
+            }
+            return false;
+        });
+
+        // --- UI Listeners (Map Buttons) ---
+        if (btnMyLocation != null) btnMyLocation.setOnClickListener(v -> checkPermissionsAndUseLocation());
+
+        if (btnListView != null) btnListView.setOnClickListener(v ->
                 NavHostFragment.findNavController(MapFragment.this).navigateUp());
+
         if (btnFilters != null) btnFilters.setOnClickListener(v -> {
             FilterParams cur = sharedVm.getFilters().getValue();
-            String typeArg = cur != null ? cur.type : null;
             if (cur == null) {
-                cur = FilterParams.fromPrefs(prefs.getAll(), typeArg);
-                if (cur.type == null) cur.type = typeArg;
+                cur = FilterParams.fromPrefs(prefs.getAll(), null);
             }
             FilterBottomSheetFragment.newInstance(cur)
                     .show(getChildFragmentManager(), "filters");
         });
 
-        sharedVm = new ViewModelProvider(requireActivity()).get(PetSearchViewModel.class);
-
+        // --- Toolbar Setup (if it exists) ---
         if (toolbar != null) {
             requireActivity().addMenuProvider(new MenuProvider() {
                 @Override public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
@@ -135,13 +216,10 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
                     int id = item.getItemId();
                     if (id == R.id.action_filters) {
                         FilterParams cur = sharedVm.getFilters().getValue();
-                        String typeArg = cur != null ? cur.type : null;
                         if (cur == null) {
-                            cur = FilterParams.fromPrefs(prefs.getAll(), typeArg);
-                            if (cur.type == null) cur.type = typeArg;
+                            cur = FilterParams.fromPrefs(prefs.getAll(), null);
                         }
-                        FilterBottomSheetFragment.newInstance(cur)
-                                .show(getChildFragmentManager(), "filters");
+                        FilterBottomSheetFragment.newInstance(cur).show(getChildFragmentManager(), "filters");
                         return true;
                     } else if (id == R.id.action_toggle_list) {
                         NavHostFragment.findNavController(MapFragment.this).navigateUp();
@@ -157,12 +235,15 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
             Log.w(TAG, "No toolbar found in fragment_map layout; map filters menu will not appear.");
         }
 
+        // --- MapBox Setup ---
         mapView.getMapboxMap().loadStyleUri(Style.MAPBOX_STREETS, style -> {
+            // Set default camera
             mapView.getMapboxMap().setCamera(new CameraOptions.Builder()
-                    .center(Point.fromLngLat(-79.3832, 43.6532))
+                    .center(Point.fromLngLat(-79.3832, 43.6532)) // Default
                     .zoom(10.0)
                     .build());
 
+            // --- Source and Layer Setup ---
             String srcJson = "{"
                     + "\"type\":\"geojson\","
                     + "\"data\":{\"type\":\"FeatureCollection\",\"features\":[]},"
@@ -173,7 +254,6 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
             if (!style.styleSourceExists(SRC_ID)) {
                 style.addStyleSource(SRC_ID, Value.fromJson(srcJson).getValue());
             }
-
             String clustersLayerJson = "{"
                     + "\"id\":\"" + LAYER_CLUSTERS + "\","
                     + "\"type\":\"circle\","
@@ -189,7 +269,6 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
             if (!style.styleLayerExists(LAYER_CLUSTERS)) {
                 style.addStyleLayer(Value.fromJson(clustersLayerJson).getValue(), null);
             }
-
             String countLayerJson = "{"
                     + "\"id\":\"" + LAYER_CLUSTER_COUNT + "\","
                     + "\"type\":\"symbol\","
@@ -206,7 +285,6 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
             if (!style.styleLayerExists(LAYER_CLUSTER_COUNT)) {
                 style.addStyleLayer(Value.fromJson(countLayerJson).getValue(), null);
             }
-
             String unclusteredLayerJson = "{"
                     + "\"id\":\"" + LAYER_UNCLUSTERED + "\","
                     + "\"type\":\"circle\","
@@ -223,9 +301,14 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
                 style.addStyleLayer(Value.fromJson(unclusteredLayerJson).getValue(), null);
             }
 
+            // --- Observers for Map Data ---
             sharedVm.results().observe(getViewLifecycleOwner(), animals -> {
                 if (animals == null) return;
                 if (!isAdded() || destroyed.get()) return;
+                // Center camera on the first search
+                if (sharedVm.getFormattedLocation().getValue() != null && !cameraFittedOnce) {
+                    centerMapOnCurrentLocation();
+                }
                 geocodeAndShow(style, animals);
             });
 
@@ -236,8 +319,91 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
             attachTapHandlers();
         });
 
-        centerOnUserIfPermitted();
+        // Removed the old centerOnUserIfPermitted() call from here.
     }
+
+    // --- NEW Location Helper Methods ---
+    private void checkPermissionsAndUseLocation() {
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            useCurrentDeviceLocation();
+        } else {
+            locationPermsLauncher.launch(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION});
+        }
+    }
+
+    private void useCurrentDeviceLocation() {
+        if (getContext() == null) return;
+        try {
+            android.location.LocationManager lm = (android.location.LocationManager) requireContext().getSystemService(Context.LOCATION_SERVICE);
+            if (lm == null) throw new Exception("LocationManager not found");
+
+            final LocationListener locationListener = new LocationListener() {
+                @Override
+                public void onLocationChanged(Location loc) {
+                    String latLngQuery = loc.getLatitude() + "," + loc.getLongitude();
+                    sharedVm.searchAtLocation(latLngQuery); // Use sharedVm
+
+                    // Also move the map camera
+                    if (mapView != null) {
+                        mapView.getMapboxMap().setCamera(new CameraOptions.Builder()
+                                .center(Point.fromLngLat(loc.getLongitude(), loc.getLatitude()))
+                                .zoom(12.0)
+                                .build());
+                        cameraFittedOnce = true;
+                    }
+
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() ->
+                                Toast.makeText(getContext(), "Location found!", Toast.LENGTH_SHORT).show()
+                        );
+                    }
+                }
+
+                @Override public void onStatusChanged(String provider, int status, Bundle extras) {}
+                @Override public void onProviderEnabled(String provider) {}
+                @Override public void onProviderDisabled(String provider) {}
+            };
+
+            boolean isGpsEnabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
+            boolean isNetworkEnabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+
+            Toast.makeText(getContext(), "Getting location...", Toast.LENGTH_SHORT).show();
+            if (isNetworkEnabled) {
+                lm.requestSingleUpdate(LocationManager.NETWORK_PROVIDER, locationListener, Looper.getMainLooper());
+            } else if (isGpsEnabled) {
+                lm.requestSingleUpdate(LocationManager.GPS_PROVIDER, locationListener, Looper.getMainLooper());
+            } else {
+                Toast.makeText(getContext(), "Could not retrieve location. Please ensure GPS or Network location is enabled.", Toast.LENGTH_LONG).show();
+            }
+
+        } catch (SecurityException e) {
+            Toast.makeText(getContext(), "Location permission is required to use this feature.", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(getContext(), "Failed to get location: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    // This method centers the map based on the ViewModel's location, not the device GPS.
+    private void centerMapOnCurrentLocation() {
+        if (mapView == null || sharedVm.lastLocation == null) return;
+
+        try {
+            String[] parts = sharedVm.lastLocation.split(",");
+            if (parts.length == 2) {
+                double lat = Double.parseDouble(parts[0]);
+                double lng = Double.parseDouble(parts[1]);
+                mapView.getMapboxMap().setCamera(new CameraOptions.Builder()
+                        .center(Point.fromLngLat(lng, lat))
+                        .zoom(12.0)
+                        .build());
+                cameraFittedOnce = true;
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to parse lastLocation to center map", e);
+        }
+    }
+
+    // --- Existing Methods (Unchanged) ---
 
     private ExecutorService ensureExec() {
         if (exec == null || exec.isShutdown() || exec.isTerminated()) {
@@ -254,6 +420,10 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
             gestures.addOnMapClickListener(coord -> {
                 ScreenCoordinate sc = map.pixelForCoordinate(coord);
 
+                if (infoWindow != null && infoWindow.getVisibility() == View.VISIBLE) {
+                    infoWindow.setVisibility(View.GONE);
+                }
+
                 RenderedQueryOptions optsUnclustered =
                         new RenderedQueryOptions(Arrays.asList(LAYER_UNCLUSTERED), null);
                 map.queryRenderedFeatures(sc, optsUnclustered, expected -> {
@@ -267,18 +437,21 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
                             Number idNum = f.getNumberProperty("animalId");
                             if (idNum == null) continue;
                             ids.add(idNum.longValue());
-                            names.add(f.hasProperty("name") ? f.getStringProperty("name")
-                                    : ("Pet " + idNum));
+                            names.add(f.hasProperty("name") ? f.getStringProperty("name") : ("Pet " + idNum));
                         }
                         if (ids.isEmpty()) return;
 
                         if (ids.size() == 1) {
-                            openDetails(ids.get(0));
+                            Animal animal = findAnimalById(ids.get(0));
+                            if (animal != null) showInfoWindow(animal);
                         } else {
                             new androidx.appcompat.app.AlertDialog.Builder(requireContext())
                                     .setTitle("Select a pet")
                                     .setItems(names.toArray(new String[0]),
-                                            (d, which) -> openDetails(ids.get(which)))
+                                            (d, which) -> {
+                                                Animal animal = findAnimalById(ids.get(which));
+                                                if (animal != null) showInfoWindow(animal);
+                                            })
                                     .show();
                         }
                         return;
@@ -370,9 +543,11 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
                     }
                 }
 
-                Toast.makeText(requireContext(),
-                        "Mapped " + jittered.size() + " pets",
-                        Toast.LENGTH_SHORT).show();
+                if (isAdded() && getContext() != null) {
+                    Toast.makeText(getContext(),
+                            "Mapped " + jittered.size() + " pets",
+                            Toast.LENGTH_SHORT).show();
+                }
             });
         });
     }
@@ -395,57 +570,20 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
     }
 
     private static boolean notEmpty(String s) { return s != null && !s.trim().isEmpty(); }
+
     private static void append(StringBuilder sb, String s) {
-        if (notEmpty(s)) { if (sb.length() > 0) sb.append(", "); sb.append(s.trim()); }
-    }
-
-    private void ensureLocationThenCenter() {
-        boolean coarse = ContextCompat.checkSelfPermission(requireContext(),
-                Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-        boolean fine = ContextCompat.checkSelfPermission(requireContext(),
-                Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-
-        if (coarse || fine) {
-            centerOnUserIfPermitted();
-        } else {
-            locationPermsLauncher.launch(new String[] {
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-            });
+        if (notEmpty(s)) {
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(s.trim());
         }
     }
 
-    private void centerOnUserIfPermitted() {
-        try {
-            android.location.LocationManager lm =
-                    (android.location.LocationManager) requireContext()
-                            .getSystemService(Context.LOCATION_SERVICE);
-            Location loc = null;
-            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
-                    == PackageManager.PERMISSION_GRANTED) {
-                loc = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER);
-                if (loc == null) {
-                    loc = lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER);
-                }
-            } else if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION)
-                    == PackageManager.PERMISSION_GRANTED) {
-                loc = lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER);
-            }
-
-            if (loc != null && mapView != null) {
-                mapView.getMapboxMap().setCamera(new CameraOptions.Builder()
-                        .center(Point.fromLngLat(loc.getLongitude(), loc.getLatitude()))
-                        .zoom(12.0)
-                        .build());
-            }
-        } catch (Exception ignored) { }
-    }
-
     @Override public void onStart() { super.onStart(); if (mapView != null) mapView.onStart(); }
-    @Override public void onStop()  { super.onStop();  if (mapView != null) mapView.onStop(); }
+    @Override public void onStop() { super.onStop(); if (mapView != null) mapView.onStop(); }
     @Override public void onLowMemory() { super.onLowMemory(); if (mapView != null) mapView.onLowMemory(); }
 
-    @Override public void onDestroyView() {
+    @Override
+    public void onDestroyView() {
         destroyed.set(true);
         super.onDestroyView();
         if (mapView != null) {
@@ -461,9 +599,53 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
     @Override
     public void onFiltersApplied(FilterParams params) {
         sharedVm.applyFilters(params);
-        SharedPreferences.Editor e = prefs.edit();
-        for (Map.Entry<String, String> en : params.toPrefs().entrySet()) e.putString(en.getKey(), en.getValue());
+        // Save filters to the filter prefs file
+        SharedPreferences filterPrefs = requireContext().getSharedPreferences("filters", Context.MODE_PRIVATE);
+        SharedPreferences.Editor e = filterPrefs.edit();
+        for (Map.Entry<String, String> en : params.toPrefs().entrySet())
+            e.putString(en.getKey(), en.getValue());
         e.apply();
         cameraFittedOnce = false;
+    }
+
+    @Nullable
+    private Animal findAnimalById(long id) {
+        List<Animal> currentAnimals = sharedVm.results().getValue();
+        if (currentAnimals == null) return null;
+
+        for (Animal animal : currentAnimals) {
+            if (animal.id == id) {
+                return animal;
+            }
+        }
+        return null;
+    }
+
+    private void showInfoWindow(@NonNull Animal animal) {
+        if (infoWindow == null) return;
+
+        infoWindowName.setText(animal.name != null && !animal.name.isEmpty() ? animal.name : "(Unnamed)");
+        String details = String.format(Locale.US, "%s • %s • %s",
+                animal.age != null ? animal.age : "?",
+                animal.gender != null ? animal.gender : "?",
+                animal.size != null ? animal.size : "?");
+        infoWindowDetails.setText(details);
+
+        String imageUrl = null;
+        if (animal.photos != null && !animal.photos.isEmpty()) {
+            Photo p = animal.photos.get(0);
+            if (p.medium != null) imageUrl = p.medium;
+            else if (p.small != null) imageUrl = p.small;
+            else if (p.large != null) imageUrl = p.large;
+            else if (p.full != null) imageUrl = p.full;
+        }
+        Glide.with(this)
+                .load(imageUrl)
+                .placeholder(R.drawable.ic_paw)
+                .centerInside() // Use centerInside to avoid cropping
+                .into(infoWindowImage);
+
+        infoWindowButton.setOnClickListener(v -> openDetails(animal.id));
+        infoWindow.setVisibility(View.VISIBLE);
     }
 }
