@@ -132,7 +132,6 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
         btnMyLocation = view.findViewById(R.id.btnMyLocation);
         btnListView = view.findViewById(R.id.btnListView);
         btnFilters = view.findViewById(R.id.btnFilters);
-        toolbar = view.findViewById(R.id.toolbar);
         infoWindow = view.findViewById(R.id.info_window);
         infoWindowImage = infoWindow.findViewById(R.id.info_window_image);
         infoWindowDetails = infoWindow.findViewById(R.id.info_window_details);

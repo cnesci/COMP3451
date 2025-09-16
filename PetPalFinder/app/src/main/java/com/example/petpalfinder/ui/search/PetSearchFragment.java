@@ -33,6 +33,7 @@ import com.google.android.material.textfield.TextInputEditText;
 import java.util.Map;
 import android.location.LocationListener;
 import android.os.Looper;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 public class PetSearchFragment extends Fragment implements FilterBottomSheetFragment.Listener {
 
@@ -56,10 +57,13 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
         // --- View Initialization ---
         list = v.findViewById(R.id.list);
         ProgressBar pb = v.findViewById(R.id.progress);
-        MaterialToolbar toolbar = v.findViewById(R.id.toolbar);
         View locationBar = v.findViewById(R.id.location_bar);
         TextInputEditText locationEditText = locationBar.findViewById(R.id.location_edit_text);
         ImageButton myLocationButton = locationBar.findViewById(R.id.my_location_button);
+        // Add references to the new FABs
+        FloatingActionButton fabFilters = v.findViewById(R.id.fab_filters);
+        FloatingActionButton fabMap = v.findViewById(R.id.fab_map);
+
 
         // --- LOCATION PERMISSIONS LAUNCHER ---
         locationPermsLauncher = registerForActivityResult(
@@ -113,7 +117,6 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
                 String query = textView.getText().toString().trim();
                 if (!query.isEmpty()) {
                     vm.searchAtLocation(query);
-                    // Hide keyboard
                     InputMethodManager imm = (InputMethodManager) requireContext().getSystemService(Context.INPUT_METHOD_SERVICE);
                     if (imm != null) {
                         imm.hideSoftInputFromWindow(textView.getWindowToken(), 0);
@@ -125,31 +128,23 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
             return false;
         });
 
-        toolbar.setOnMenuItemClickListener(item -> {
-            int id = item.getItemId();
-            if (id == R.id.action_toggle_map) {
-                NavHostFragment.findNavController(PetSearchFragment.this).navigate(R.id.action_petSearchFragment_to_mapFragment);
-                return true;
-            } else if (id == R.id.action_filters) {
-                FilterParams cur = vm.getFilters().getValue();
-                if (cur == null) {
-                    // Use filter prefs, not location prefs
-                    SharedPreferences filterPrefs = requireContext().getSharedPreferences("filters", Context.MODE_PRIVATE);
-                    cur = FilterParams.fromPrefs(filterPrefs.getAll(), null);
-                }
-                FilterBottomSheetFragment.newInstance(cur).show(getChildFragmentManager(), "filters");
-                return true;
+        // --- ADD NEW FAB CLICK LISTENERS ---
+        fabFilters.setOnClickListener(click -> {
+            FilterParams cur = vm.getFilters().getValue();
+            if (cur == null) {
+                // Use filter prefs, not location prefs
+                SharedPreferences filterPrefs = requireContext().getSharedPreferences("filters", Context.MODE_PRIVATE);
+                cur = FilterParams.fromPrefs(filterPrefs.getAll(), null);
             }
-            return false;
-        });
-        toolbar.setNavigationOnClickListener(click -> {
-            if (NavHostFragment.findNavController(this).getPreviousBackStackEntry() != null) {
-                NavHostFragment.findNavController(this).navigateUp();
-            } else {
-                // No back stack, perhaps close activity
-            }
+            FilterBottomSheetFragment.newInstance(cur).show(getChildFragmentManager(), "filters");
         });
 
+        fabMap.setOnClickListener(click -> {
+            NavHostFragment.findNavController(PetSearchFragment.this).navigate(R.id.action_petSearchFragment_to_mapFragment);
+        });
+
+
+        // --- Recycler Scroll Listener ---
         list.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
@@ -165,7 +160,7 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
             }
         });
 
-        // Now that all observers and adapters are set, it's safe to load data.
+        // --- INITIAL SEARCH ---
         if (vm.results().getValue() == null || vm.results().getValue().isEmpty()) {
             String lastQuery = prefs.getString("last_query", "Bradford West Gwillimbury, ON");
             if(locationEditText != null) {

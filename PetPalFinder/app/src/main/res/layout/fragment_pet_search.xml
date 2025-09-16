@@ -9,16 +9,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
-            style="@style/Widget.Material3.Toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:theme="@style/ThemeOverlay.Material3.ActionBar"
-            app:menu="@menu/menu_pet_search"
-            app:navigationIcon="?attr/homeAsUpIndicator"
-            app:title="Nearby Pets" />
-
         <include
             android:id="@+id/location_bar"
             layout="@layout/location_input_bar" />
@@ -37,4 +27,24 @@
         android:layout_height="56dp"
         android:layout_gravity="center"
         android:visibility="gone" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_map"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="92dp"
+        android:contentDescription="Map View"
+        app:srcCompat="@android:drawable/ic_menu_mapmode" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_filters"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:contentDescription="Filters"
+        app:srcCompat="@drawable/ic_filter_list_24" />
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
