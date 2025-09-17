@@ -56,9 +56,11 @@ public class PetDetailViewModel extends AndroidViewModel {
         if (currentAnimal == null) return;
 
         AppDatabase.databaseWriteExecutor.execute(() -> {
-            if (isFavorite(currentAnimal.id).getValue() == Boolean.TRUE) {
+            if (favoriteDao.isFavoriteSync(currentAnimal.id) > 0) {
+                // If count is > 0, it exists, so delete it
                 favoriteDao.delete(new FavoriteAnimal(currentAnimal));
             } else {
+                // Otherwise, it doesn't exist, so insert it
                 favoriteDao.insert(new FavoriteAnimal(currentAnimal));
             }
         });

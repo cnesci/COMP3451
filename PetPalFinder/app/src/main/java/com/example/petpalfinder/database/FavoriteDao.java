@@ -22,4 +22,7 @@ public interface FavoriteDao {
 
     @Query("SELECT EXISTS(SELECT 1 FROM favorites WHERE id = :animalId LIMIT 1)")
     LiveData<Boolean> isFavorite(long animalId);
+
+    @Query("SELECT COUNT(*) FROM favorites WHERE id = :animalId")
+    int isFavoriteSync(long animalId);
 }
