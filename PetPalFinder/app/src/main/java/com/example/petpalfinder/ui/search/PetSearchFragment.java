@@ -63,7 +63,7 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
         // Add references to the new FABs
         FloatingActionButton fabFilters = v.findViewById(R.id.fab_filters);
         FloatingActionButton fabMap = v.findViewById(R.id.fab_map);
-
+        FloatingActionButton fabFavorites = v.findViewById(R.id.fab_favorites_list);
 
         // --- LOCATION PERMISSIONS LAUNCHER ---
         locationPermsLauncher = registerForActivityResult(
@@ -143,6 +143,9 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
             NavHostFragment.findNavController(PetSearchFragment.this).navigate(R.id.action_petSearchFragment_to_mapFragment);
         });
 
+        fabFavorites.setOnClickListener(click -> {
+            NavHostFragment.findNavController(PetSearchFragment.this).navigate(R.id.action_petSearchFragment_to_favoritesFragment);
+        });
 
         // --- Recycler Scroll Listener ---
         list.addOnScrollListener(new RecyclerView.OnScrollListener() {

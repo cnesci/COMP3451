@@ -27,6 +27,10 @@
         <action
             android:id="@+id/action_petSearchFragment_to_mapFragment"
             app:destination="@id/mapFragment" />
+
+        <action
+            android:id="@+id/action_petSearchFragment_to_favoritesFragment"
+            app:destination="@id/favoritesFragment" />
     </fragment>
 
     <fragment
@@ -46,6 +50,16 @@
 
         <action
             android:id="@+id/action_map_to_petDetail"
+            app:destination="@id/petDetailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/favoritesFragment"
+        android:name="com.example.petpalfinder.ui.favorites.FavoritesFragment"
+        android:label="My Favorites"
+        tools:layout="@layout/fragment_favorites">
+        <action
+            android:id="@+id/action_favoritesFragment_to_petDetailFragment"
             app:destination="@id/petDetailFragment" />
     </fragment>
 </navigation>

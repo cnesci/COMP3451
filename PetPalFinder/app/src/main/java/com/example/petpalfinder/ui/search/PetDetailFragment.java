@@ -23,6 +23,7 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.example.petpalfinder.R;
 import com.example.petpalfinder.model.petfinder.Animal;
 import com.example.petpalfinder.model.petfinder.Photo;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
@@ -45,6 +46,9 @@ public class PetDetailFragment extends Fragment {
     public void onViewCreated(@NonNull View v, @Nullable Bundle s) {
         super.onViewCreated(v, s);
         vm = new ViewModelProvider(this).get(PetDetailViewModel.class);
+
+        // --- Get reference to the FAB ---
+        FloatingActionButton fabFavorite = v.findViewById(R.id.fab_favorite);
 
         // Carousel
         ViewPager2 pager = v.findViewById(R.id.photoPager);
@@ -181,6 +185,19 @@ public class PetDetailFragment extends Fragment {
         });
 
         long id = PetDetailFragmentArgs.fromBundle(getArguments()).getAnimalId();
+
+        // --- OBSERVE FAVORITE STATUS ---
+        vm.isFavorite(id).observe(getViewLifecycleOwner(), isFavorited -> {
+            if (isFavorited) {
+                fabFavorite.setImageResource(R.drawable.ic_favorite_24);
+            } else {
+                fabFavorite.setImageResource(R.drawable.ic_favorite_border_24);
+            }
+        });
+
+        // --- FAB CLICK LISTENER ---
+        fabFavorite.setOnClickListener(view -> vm.toggleFavorite());
+
         vm.load(id);
     }
 
