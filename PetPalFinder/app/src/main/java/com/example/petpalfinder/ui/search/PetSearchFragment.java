@@ -207,11 +207,10 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
             final LocationListener locationListener = new LocationListener() {
                 @Override
                 public void onLocationChanged(Location loc) {
-                    // We got the location! Now update the ViewModel
+                    // We got the location. Now update the ViewModel
                     String latLngQuery = loc.getLatitude() + "," + loc.getLongitude();
                     vm.searchAtLocation(latLngQuery);
 
-                    // This callback can come from a different thread, ensure UI work is on the main thread
                     if (getActivity() != null) {
                         getActivity().runOnUiThread(() ->
                                 Toast.makeText(getContext(), "Location found!", Toast.LENGTH_SHORT).show()

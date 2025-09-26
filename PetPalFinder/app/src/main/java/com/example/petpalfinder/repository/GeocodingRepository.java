@@ -22,7 +22,6 @@ public class GeocodingRepository {
 
     /** Raw forward geocoding (full Retrofit callback) */
     public void forward(String address, Callback<OpenCageResponse> callback) {
-        // Keep payload small: limit=1, no_annotations=1
         api.forwardGeocode(address, apiKey, 1, 1).enqueue(callback);
     }
 
@@ -32,11 +31,6 @@ public class GeocodingRepository {
         api.reverseGeocode(q, apiKey, 1, 1).enqueue(callback);
     }
 
-    /**
-     * Simple one-lambda handler. Because onError has a default implementation,
-     * this interface has only ONE abstract method (onSuccess) and is therefore
-     * a functional interface—so lambdas work.
-     */
     public interface SimpleHandler {
         void onSuccess(double lat, double lng, String formatted);
         default void onError(String message) { /* no-op by default */ }
@@ -64,7 +58,7 @@ public class GeocodingRepository {
         });
     }
 
-    /** Optional: convenience wrapper for reverse geocoding with SimpleHandler */
+    /** convenience wrapper for reverse geocoding with SimpleHandler */
     public void reverseSimple(double lat, double lng, SimpleHandler handler) {
         reverse(lat, lng, new Callback<OpenCageResponse>() {
             @Override

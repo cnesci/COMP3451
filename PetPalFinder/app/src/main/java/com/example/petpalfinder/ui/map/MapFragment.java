@@ -138,7 +138,7 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
         infoWindowButton = infoWindow.findViewById(R.id.info_window_button);
         infoWindowName = infoWindow.findViewById(R.id.info_window_name);
 
-        // --- NEW Location Bar Setup ---
+        // --- Location Bar Setup ---
         View locationBar = view.findViewById(R.id.location_bar);
         TextInputEditText locationEditText = locationBar.findViewById(R.id.location_edit_text);
         ImageButton myLocationButton = locationBar.findViewById(R.id.my_location_button);
@@ -205,7 +205,7 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
                     .show(getChildFragmentManager(), "filters");
         });
 
-        // --- Toolbar Setup (if it exists) ---
+        // --- Toolbar Setup ---
         if (toolbar != null) {
             requireActivity().addMenuProvider(new MenuProvider() {
                 @Override public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
@@ -317,11 +317,9 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
 
             attachTapHandlers();
         });
-
-        // Removed the old centerOnUserIfPermitted() call from here.
     }
 
-    // --- NEW Location Helper Methods ---
+    // --- Location Helper Methods ---
     private void checkPermissionsAndUseLocation() {
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             useCurrentDeviceLocation();
@@ -401,8 +399,6 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
             Log.w(TAG, "Failed to parse lastLocation to center map", e);
         }
     }
-
-    // --- Existing Methods (Unchanged) ---
 
     private ExecutorService ensureExec() {
         if (exec == null || exec.isShutdown() || exec.isTerminated()) {

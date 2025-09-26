@@ -153,7 +153,7 @@ public class PetfinderRepository {
             }
         }
 
-        // Sort the combined list to ensure a consistent order (e.g., by distance)
+        // Sort the combined list to ensure a consistent order (by distance)
         if ("distance".equals(filters.sort)) {
             combinedAnimals.sort(Comparator.comparing(
                     animal -> animal.distance != null ? animal.distance : Double.MAX_VALUE

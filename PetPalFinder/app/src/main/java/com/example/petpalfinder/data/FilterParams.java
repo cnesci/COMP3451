@@ -16,14 +16,13 @@ public class FilterParams {
     @Nullable public String age;
     @Nullable public String size;
 
-    // --- multi-select canonical fields used by UI / VM ---
+    // --- multi-select fields used by UI ---
     public List<String> types   = new ArrayList<>();
     public List<String> genders = new ArrayList<>();
     public List<String> ages    = new ArrayList<>();
     public List<String> sizes   = new ArrayList<>();
 
-    // --- toggles ---
-    /** Canonical flag used in queries/prefs. */
+    /** flag used in queries/prefs. */
     public boolean goodWithChildren = false;
     public boolean goodWithDogs     = false;
     public boolean goodWithCats     = false;
@@ -44,7 +43,7 @@ public class FilterParams {
             } else {
                     f.type = null;
             }
-        if (f.distanceKm == null) f.distanceKm = 50; // sensible default
+        if (f.distanceKm == null) f.distanceKm = 50; // default
         return f;
     }
 
@@ -75,15 +74,15 @@ public class FilterParams {
         // Toggles
         boolean gwk = getBool(prefs, "gwk", false);
         f.goodWithChildren = getBool(prefs, "good_with_children", gwk);
-        f.goodWithDogs     = getBool(prefs, "gwd", false) || getBool(prefs, "good_with_dogs", false);
-        f.goodWithCats     = getBool(prefs, "gwc", false) || getBool(prefs, "good_with_cats", false);
+        f.goodWithDogs = getBool(prefs, "gwd", false) || getBool(prefs, "good_with_dogs", false);
+        f.goodWithCats = getBool(prefs, "gwc", false) || getBool(prefs, "good_with_cats", false);
 
         f.distanceKm = getInt(prefs, "distKm", (f.distanceKm != null ? f.distanceKm : 50));
-        f.sort       = getString(prefs, "sort", (f.sort != null ? f.sort : "distance"));
+        f.sort = getString(prefs, "sort", (f.sort != null ? f.sort : "distance"));
 
         f.gender = firstOrNull(f.genders);
-        f.age    = firstOrNull(f.ages);
-        f.size   = firstOrNull(f.sizes);
+        f.age = firstOrNull(f.ages);
+        f.size = firstOrNull(f.sizes);
 
         f.syncAliases();
         return f;
@@ -96,7 +95,7 @@ public class FilterParams {
         m.put("gendersCsv", joinCsv(genders));
         m.put("agesCsv",    joinCsv(ages));
         m.put("sizesCsv",   joinCsv(sizes));
-        m.put("gwk",        Boolean.toString(goodWithChildren)); // legacy key
+        m.put("gwk",        Boolean.toString(goodWithChildren));
         m.put("gwd",        Boolean.toString(goodWithDogs));
         m.put("gwc",        Boolean.toString(goodWithCats));
         m.put("good_with_children", Boolean.toString(goodWithChildren));
