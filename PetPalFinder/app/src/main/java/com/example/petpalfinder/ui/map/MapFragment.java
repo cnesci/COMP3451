@@ -68,6 +68,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MapFragment extends Fragment implements FilterBottomSheetFragment.Listener {
 
+    // Constants for logging and Mapbox layer IDs
     private static final String TAG = "MapFragment";
     private static final String SRC_ID = "pet_points";
     private static final String LAYER_CLUSTERS = "pet_points_clusters";
@@ -75,22 +76,25 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
     private static final String LAYER_UNCLUSTERED = "pet_points_unclustered";
     private static final String LAYER_GROUP_COUNT = "pet_points_group_count";
 
+    // UI Components
     private MapView mapView;
     private ImageButton btnMyLocation, btnListView, btnFilters;
     private PetSearchViewModel sharedVm;
 
+    // Concurrency and state management
     private ExecutorService exec;
     private final AtomicBoolean destroyed = new AtomicBoolean(false);
     private boolean cameraFittedOnce = false;
 
+    // Data persistence and Info Window UI
     private SharedPreferences prefs;
-
     private View infoWindow;
     private ImageView infoWindowImage;
     private TextView infoWindowDetails;
     private Button infoWindowButton;
     private TextView infoWindowName;
 
+    // Handles requesting location permissions from the user
     private ActivityResultLauncher<String[]> locationPermsLauncher;
 
     @Nullable
@@ -99,6 +103,7 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
         destroyed.set(false);
         exec = Executors.newSingleThreadExecutor();
 
+        // Initialize the permission launcher to handle the result of the location permission request.
         locationPermsLauncher =
                 registerForActivityResult(
                         new ActivityResultContracts.RequestMultiplePermissions(),
@@ -119,6 +124,7 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
     public void onViewCreated(@NonNull View view, @Nullable Bundle s) {
         super.onViewCreated(view, s);
 
+        // Initialize all UI views from the layout
         mapView = view.findViewById(R.id.mapView);
         btnMyLocation = view.findViewById(R.id.btnMyLocation);
         btnListView = view.findViewById(R.id.btnListView);
@@ -133,9 +139,11 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
         TextInputEditText locationEditText = locationBar.findViewById(R.id.location_edit_text);
         ImageButton myLocationButton = locationBar.findViewById(R.id.my_location_button);
 
+        // Initialize SharedPreferences and the shared ViewModel
         prefs = requireContext().getSharedPreferences("location_prefs", Context.MODE_PRIVATE);
         sharedVm = new ViewModelProvider(requireActivity()).get(PetSearchViewModel.class);
 
+        // Handle the device's back button press to navigate up
         requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
@@ -143,16 +151,19 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
             }
         });
 
+        // If there are no results, perform an initial search with the last saved location
         if (sharedVm.results().getValue() == null || sharedVm.results().getValue().isEmpty()) {
             String lastQuery = prefs.getString("last_query", "Bradford West Gwillimbury, ON");
             sharedVm.searchAtLocation(lastQuery);
         }
 
+        // Observe location changes and update the search bar text
         sharedVm.getFormattedLocation().observe(getViewLifecycleOwner(), formatted -> {
             locationEditText.setText(formatted);
             prefs.edit().putString("last_query", sharedVm.lastLocation).putString("last_formatted", formatted).apply();
         });
 
+        // Set up click listeners for location bar and map buttons
         myLocationButton.setOnClickListener(v -> checkPermissionsAndUseLocation());
         locationEditText.setOnEditorActionListener((textView, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
@@ -178,6 +189,7 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
             FilterBottomSheetFragment.newInstance(cur).show(getChildFragmentManager(), "filters");
         });
 
+        // Load the map style and set up observers and tap handlers once loaded
         mapView.getMapboxMap().loadStyleUri(Style.MAPBOX_STREETS, style -> {
             setupMapStyle(style);
             sharedVm.results().observe(getViewLifecycleOwner(), animals -> {
@@ -190,30 +202,42 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
         });
     }
 
+    // Configures the initial map style, source, and layers for displaying pet data
     private void setupMapStyle(@NonNull Style style) {
         mapView.getMapboxMap().setCamera(new CameraOptions.Builder().center(Point.fromLngLat(-79.3832, 43.6532)).zoom(10.0).build());
+
+        // Define the GeoJSON source for pet data with clustering enabled
         String srcJson = "{\"type\":\"geojson\",\"data\":{\"type\":\"FeatureCollection\",\"features\":[]},\"cluster\":true,\"clusterMaxZoom\":14,\"clusterRadius\":50}";
         if (!style.styleSourceExists(SRC_ID)) {
             style.addStyleSource(SRC_ID, Value.fromJson(srcJson).getValue());
         }
+
+        // Define the layer for displaying clustered points (circles)
         String clustersLayerJson = "{\"id\":\"" + LAYER_CLUSTERS + "\",\"type\":\"circle\",\"source\":\"" + SRC_ID + "\",\"filter\":[\"has\",\"point_count\"],\"paint\":{\"circle-color\":[\"step\",[\"get\",\"point_count\"],\"#93c5fd\",10,\"#60a5fa\",25,\"#3b82f6\"],\"circle-radius\":[\"step\",[\"get\",\"point_count\"],14,10,18,25,22]}}";
         if (!style.styleLayerExists(LAYER_CLUSTERS)) {
             style.addStyleLayer(Value.fromJson(clustersLayerJson).getValue(), null);
         }
+
+        // Define the layer for displaying the number inside each cluster
         String countLayerJson = "{\"id\":\"" + LAYER_CLUSTER_COUNT + "\",\"type\":\"symbol\",\"source\":\"" + SRC_ID + "\",\"filter\":[\"has\",\"point_count\"],\"layout\":{\"text-field\":\"{point_count_abbreviated}\",\"text-size\":12},\"paint\":{\"text-color\":\"#ffffff\"}}";
         if (!style.styleLayerExists(LAYER_CLUSTER_COUNT)) {
             style.addStyleLayer(Value.fromJson(countLayerJson).getValue(), null);
         }
+
+        // Define the layer for displaying individual (unclustered) pet pins
         String unclusteredLayerJson = "{\"id\":\"" + LAYER_UNCLUSTERED + "\",\"type\":\"circle\",\"source\":\"" + SRC_ID + "\",\"filter\":[\"!\",[\"has\",\"point_count\"]],\"paint\":{\"circle-radius\":8,\"circle-color\":\"#3b82f6\",\"circle-stroke-color\":\"#ffffff\",\"circle-stroke-width\":2}}";
         if (!style.styleLayerExists(LAYER_UNCLUSTERED)) {
             style.addStyleLayer(Value.fromJson(unclusteredLayerJson).getValue(), null);
         }
+
+        // Define the layer for showing a count on pins with multiple pets at the same location
         String groupCountLayerJson = "{\"id\":\"" + LAYER_GROUP_COUNT + "\",\"type\":\"symbol\",\"source\":\"" + SRC_ID + "\",\"filter\":[\"all\",[\"!\",[\"has\",\"point_count\"]],[\"has\",\"count\"]],\"layout\":{\"text-field\":\"{count}\",\"text-size\":12,\"text-ignore-placement\":true,\"text-allow-overlap\":true},\"paint\":{\"text-color\":\"#ffffff\"}}";
         if (!style.styleLayerExists(LAYER_GROUP_COUNT)) {
             style.addStyleLayer(Value.fromJson(groupCountLayerJson).getValue(), null);
         }
     }
 
+    // Sets up a listener to handle taps on the map
     private void attachTapHandlers() {
         if (mapView == null) return;
         MapboxMap map = mapView.getMapboxMap();
@@ -224,17 +248,18 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
                 infoWindow.setVisibility(View.GONE);
             }
 
+            // Query the map to see if a feature was tapped
             RenderedQueryOptions queryOptions = new RenderedQueryOptions(Arrays.asList(LAYER_CLUSTERS, LAYER_UNCLUSTERED), null);
             map.queryRenderedFeatures(new RenderedQueryGeometry(map.pixelForCoordinate(point)), queryOptions, expected -> {
                 if (expected.isValue() && expected.getValue() != null && !expected.getValue().isEmpty()) {
                     Feature feature = expected.getValue().get(0).getFeature();
-                    if (feature.hasProperty("point_count")) {
+                    if (feature.hasProperty("point_count")) { // Tapped a cluster
                         Toast.makeText(getContext(), "Zoom in to see individual pets", Toast.LENGTH_SHORT).show();
-                    } else if (feature.hasProperty("isGroup")) {
+                    } else if (feature.hasProperty("isGroup")) { // Tapped a group of pets
                         String idsJson = feature.getStringProperty("animalIdsJson");
                         List<Long> ids = gson.fromJson(idsJson, new TypeToken<List<Long>>() {}.getType());
                         showPetListDialog(ids);
-                    } else if (feature.hasProperty("animalId")) {
+                    } else if (feature.hasProperty("animalId")) { // Tapped a single pet
                         Number idNum = feature.getNumberProperty("animalId");
                         if (idNum != null) {
                             Animal animal = findAnimalById(idNum.longValue());
@@ -249,23 +274,24 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
         });
     }
 
+    // Navigates to the pet detail screen for the given animal ID
     private void openDetails(long id) {
         NavHostFragment.findNavController(this).navigate(MapFragmentDirections.actionMapToPetDetail(id));
     }
 
+    // Processes the list of animals, geocodes their locations, groups them, and updates the map
     private void geocodeAndShow(@NonNull Style style, @NonNull List<Animal> animals) {
         if (destroyed.get()) return;
         ensureExec().submit(() -> {
             if (destroyed.get()) return;
 
+            // Group animals by their geocoded location
             Map<String, List<Animal>> animalsByLocation = new LinkedHashMap<>();
             Map<String, Point> locationPoints = new HashMap<>();
-
             for (Animal a : animals) {
                 if (destroyed.get()) return;
                 String q = buildAddressQuery(a);
                 if (q == null || q.trim().isEmpty()) continue;
-
                 Point p = MapGeocoder.geocode(q);
                 if (p != null) {
                     String key = String.format(Locale.US, "%.4f,%.4f", p.latitude(), p.longitude());
@@ -277,23 +303,22 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
                 }
             }
 
+            // Create map features from the grouped animals
             List<Feature> feats = new ArrayList<>();
             List<Point> boundsPts = new ArrayList<>();
             Gson gson = new Gson();
-
             for (Map.Entry<String, List<Animal>> entry : animalsByLocation.entrySet()) {
                 Point point = locationPoints.get(entry.getKey());
                 List<Animal> petsAtLocation = entry.getValue();
-
                 if (point == null) continue;
                 boundsPts.add(point);
                 Feature f = Feature.fromGeometry(point);
 
-                if (petsAtLocation.size() == 1) {
+                if (petsAtLocation.size() == 1) { // Single pet at this location
                     Animal singlePet = petsAtLocation.get(0);
                     f.addNumberProperty("animalId", singlePet.id);
                     if (singlePet.name != null) f.addStringProperty("name", singlePet.name);
-                } else {
+                } else { // Multiple pets at this location
                     f.addBooleanProperty("isGroup", true);
                     List<Long> ids = new ArrayList<>();
                     for (Animal pet : petsAtLocation) {
@@ -305,13 +330,15 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
                 feats.add(f);
             }
 
+            // Update the map on the main thread
             FeatureCollection fc = FeatureCollection.fromFeatures(feats);
             FragmentActivity act = getActivity();
             if (act == null || destroyed.get()) return;
-
             act.runOnUiThread(() -> {
                 if (!isAdded() || destroyed.get() || mapView == null) return;
                 style.setStyleSourceProperty(SRC_ID, "data", Value.fromJson(fc.toJson()).getValue());
+
+                // Zoom the camera to fit all results, but only on the first load or after filters change
                 if (!cameraFittedOnce && boundsPts.size() >= 2) {
                     try {
                         EdgeInsets pad = new EdgeInsets(100.0, 100.0, 100.0, 100.0);
@@ -326,6 +353,7 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
         });
     }
 
+    // Checks for location permissions and requests them if necessary
     private void checkPermissionsAndUseLocation() {
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             useCurrentDeviceLocation();
@@ -334,6 +362,7 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
         }
     }
 
+    // Retrieves the user's current device location
     private void useCurrentDeviceLocation() {
         if (getContext() == null) return;
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -369,6 +398,7 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
         }
     }
 
+    // Centers the map on the last searched location from the ViewModel
     private void centerMapOnCurrentLocation() {
         if (mapView == null || sharedVm.lastLocation == null) return;
         try {
@@ -384,6 +414,7 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
         }
     }
 
+    // Ensures the background thread executor is running
     private ExecutorService ensureExec() {
         if (exec == null || exec.isShutdown() || exec.isTerminated()) {
             exec = Executors.newSingleThreadExecutor();
@@ -391,6 +422,7 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
         return exec;
     }
 
+    // Constructs a full address string from an animal's contact info for geocoding
     private String buildAddressQuery(Animal a) {
         if (a == null || a.contact == null || a.contact.address == null) return "Toronto, ON, Canada";
         StringBuilder sb = new StringBuilder();
@@ -419,6 +451,7 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
         }
     }
 
+    // Fragment lifecycle methods to manage the MapView
     @Override
     public void onStart() {
         super.onStart();
@@ -451,6 +484,7 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
         }
     }
 
+    // Callback from the filter sheet, applies new filters and resets the map view
     @Override
     public void onFiltersApplied(FilterParams params) {
         sharedVm.applyFilters(params);
@@ -459,9 +493,10 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
         for (Map.Entry<String, String> en : params.toPrefs().entrySet())
             e.putString(en.getKey(), en.getValue());
         e.apply();
-        cameraFittedOnce = false;
+        cameraFittedOnce = false; // Reset camera flag to allow zooming to new results
     }
 
+    // Helper to find an animal object from the current list by its ID
     @Nullable
     private Animal findAnimalById(long id) {
         List<Animal> currentAnimals = sharedVm.results().getValue();
@@ -474,6 +509,7 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
         return null;
     }
 
+    // Displays the bottom info window for a specific animal
     private void showInfoWindow(@NonNull Animal animal) {
         if (infoWindow == null) return;
         infoWindowName.setText(animal.name != null && !animal.name.isEmpty() ? animal.name : "(Unnamed)");
@@ -492,6 +528,7 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
         infoWindow.setVisibility(View.VISIBLE);
     }
 
+    // Shows a dialog with a list of pets when a group pin is tapped
     private void showPetListDialog(List<Long> animalIds) {
         if (animalIds == null || animalIds.isEmpty() || getContext() == null) return;
         List<Animal> petsToShow = new ArrayList<>();
@@ -509,7 +546,7 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
                 .setItems(petNames.toArray(new String[0]), (dialog, which) -> {
                     Animal selectedPet = petsToShow.get(which);
                     if (selectedPet != null) {
-                        showInfoWindow(selectedPet);
+                        showInfoWindow(selectedPet); // Show preview instead of opening details
                     }
                 })
                 .setNegativeButton("Cancel", null)
