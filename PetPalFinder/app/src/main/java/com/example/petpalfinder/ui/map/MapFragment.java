@@ -183,9 +183,6 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
             sharedVm.results().observe(getViewLifecycleOwner(), animals -> {
                 if (animals == null) return;
                 if (!isAdded() || destroyed.get()) return;
-                if (sharedVm.getFormattedLocation().getValue() != null && !cameraFittedOnce) {
-                    centerMapOnCurrentLocation();
-                }
                 geocodeAndShow(style, animals);
             });
             sharedVm.getFilters().observe(getViewLifecycleOwner(), f -> cameraFittedOnce = false);
