@@ -15,14 +15,41 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <!-- Photo carousel -->
-            <androidx.viewpager2.widget.ViewPager2
-                android:id="@+id/photoPager"
+            <!-- Container for Photo carousel and arrows -->
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="240dp"
-                android:clipToPadding="false"
-                android:clipChildren="false"
-                android:layout_marginBottom="8dp" />
+                android:layout_height="wrap_content">
+
+                <androidx.viewpager2.widget.ViewPager2
+                    android:id="@+id/photoPager"
+                    android:layout_width="match_parent"
+                    android:layout_height="240dp"
+                    android:clipToPadding="false"
+                    android:clipChildren="false"
+                    android:layout_marginBottom="8dp" />
+
+                <ImageView
+                    android:id="@+id/arrow_left"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center_vertical|start"
+                    android:layout_marginStart="8dp"
+                    android:src="@drawable/ic_arrow_left"
+                    android:background="@drawable/arrow_background"
+                    android:contentDescription="Previous Photo"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/arrow_right"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center_vertical|end"
+                    android:layout_marginEnd="8dp"
+                    android:src="@drawable/ic_arrow_right"
+                    android:background="@drawable/arrow_background"
+                    android:contentDescription="Next Photo"
+                    android:visibility="gone" />
+            </FrameLayout>
 
             <com.google.android.material.tabs.TabLayout
                 android:id="@+id/photoDots"

@@ -28,33 +28,33 @@
         android:layout_gravity="center"
         android:visibility="gone" />
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/fab_favorites_list"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="168dp"
-        app:srcCompat="@drawable/ic_favorite_24"
-        android:contentDescription="My Favorites" />
+        android:text="Favorites"
+        app:icon="@drawable/ic_favorite_24" />
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/fab_map"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="92dp"
-        android:contentDescription="Map View"
-        app:srcCompat="@android:drawable/ic_menu_mapmode" />
+        android:text="Map"
+        app:icon="@android:drawable/ic_menu_mapmode" />
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/fab_filters"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
-        android:contentDescription="Filters"
-        app:srcCompat="@drawable/ic_filter_list_24" />
+        android:text="Filters"
+        app:icon="@drawable/ic_filter_list_24" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

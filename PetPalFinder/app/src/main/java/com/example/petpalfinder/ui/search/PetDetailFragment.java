@@ -9,6 +9,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -47,12 +48,13 @@ public class PetDetailFragment extends Fragment {
         super.onViewCreated(v, s);
         vm = new ViewModelProvider(this).get(PetDetailViewModel.class);
 
-        // --- Get reference to the FAB ---
         FloatingActionButton fabFavorite = v.findViewById(R.id.fab_favorite);
 
-        // Carousel
+        // Carousel and arrows
         ViewPager2 pager = v.findViewById(R.id.photoPager);
         TabLayout dots = v.findViewById(R.id.photoDots);
+        ImageView arrowLeft = v.findViewById(R.id.arrow_left);
+        ImageView arrowRight = v.findViewById(R.id.arrow_right);
         pagerAdapter = new PhotoPagerAdapter();
         pager.setAdapter(pagerAdapter);
         pager.setOffscreenPageLimit(1);
@@ -63,7 +65,7 @@ public class PetDetailFragment extends Fragment {
         TextView meta = v.findViewById(R.id.meta);
         TextView distance = v.findViewById(R.id.distance);
         TextView desc = v.findViewById(R.id.description);
-        Button openWeb = v.findViewById(R.id.btnViewOnPetfinder); // optional (only if exists in XML)
+        Button openWeb = v.findViewById(R.id.btnViewOnPetfinder);
         Button email = v.findViewById(R.id.btnEmail);
         Button phone = v.findViewById(R.id.btnPhone);
         ProgressBar pb = v.findViewById(R.id.progress);
@@ -78,7 +80,7 @@ public class PetDetailFragment extends Fragment {
         vm.animal().observe(getViewLifecycleOwner(), a -> {
             if (a == null) return;
 
-            // --------- CAROUSEL ---------
+            // --------- CAROUSEL & ARROWS ---------
             List<String> urls = new ArrayList<>();
             if (a.photos != null) {
                 for (Photo p : a.photos) {
@@ -91,6 +93,26 @@ public class PetDetailFragment extends Fragment {
             }
             if (urls.isEmpty()) urls.add(null); // placeholder slide
             pagerAdapter.setPhotos(urls);
+
+            // Arrow visibility logic
+            pager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+                @Override
+                public void onPageSelected(int position) {
+                    super.onPageSelected(position);
+                    arrowLeft.setVisibility(position > 0 ? View.VISIBLE : View.GONE);
+                    arrowRight.setVisibility(position < urls.size() - 1 ? View.VISIBLE : View.GONE);
+                }
+            });
+
+            // Initial state
+            arrowLeft.setVisibility(View.GONE);
+            arrowRight.setVisibility(urls.size() > 1 ? View.VISIBLE : View.GONE);
+
+            // Arrow click listeners
+            arrowLeft.setOnClickListener(view -> pager.setCurrentItem(pager.getCurrentItem() - 1, true));
+            arrowRight.setOnClickListener(view -> pager.setCurrentItem(pager.getCurrentItem() + 1, true));
+
+            // ... (rest of the observer code remains the same)
 
             // --------- HEADER TEXT ---------
             name.setText(!TextUtils.isEmpty(a.name) ? a.name : "(Unnamed)");
@@ -186,7 +208,6 @@ public class PetDetailFragment extends Fragment {
 
         long id = PetDetailFragmentArgs.fromBundle(getArguments()).getAnimalId();
 
-        // --- OBSERVE FAVORITE STATUS ---
         vm.isFavorite(id).observe(getViewLifecycleOwner(), isFavorited -> {
             if (isFavorited) {
                 fabFavorite.setImageResource(R.drawable.ic_favorite_24);
@@ -195,7 +216,6 @@ public class PetDetailFragment extends Fragment {
             }
         });
 
-        // --- FAB CLICK LISTENER ---
         fabFavorite.setOnClickListener(view -> vm.toggleFavorite());
 
         vm.load(id);
@@ -203,17 +223,14 @@ public class PetDetailFragment extends Fragment {
 
     private String safe(String s) { return s == null ? "?" : s; }
 
-    // ---------- in-app description using structured fields ----------
     private CharSequence composeDescription(Animal a) {
         StringBuilder sb = new StringBuilder();
 
-        // 1) Original shelter description (HTML -> plain text)
         if (!TextUtils.isEmpty(a.description)) {
             CharSequence sp = HtmlCompat.fromHtml(a.description, HtmlCompat.FROM_HTML_MODE_LEGACY);
             sb.append(stripTrailingWhitespace(sp.toString())).append("\n\n");
         }
 
-        // 2) Quick facts (join many non-empty parts)
         String breed = joinPair(a.breeds != null ? a.breeds.primary : null,
                 a.breeds != null ? a.breeds.secondary : null, " & ");
         String color = joinPair(a.colors != null ? a.colors.primary : null,
@@ -228,7 +245,6 @@ public class PetDetailFragment extends Fragment {
         String facts = TextUtils.join(", ", parts);
         if (!TextUtils.isEmpty(facts)) sb.append("• ").append(facts).append("\n");
 
-        // 3) Health & training
         String health = bullets(
                 flag(a.attributes != null ? a.attributes.spayed_neutered : null, "Spayed/Neutered"),
                 flag(a.attributes != null ? a.attributes.shots_current   : null, "Vaccinations up to date"),
@@ -238,7 +254,6 @@ public class PetDetailFragment extends Fragment {
         );
         if (!TextUtils.isEmpty(health)) sb.append(health);
 
-        // 4) Good with…
         String env = bullets(
                 boolLine(a.environment != null ? a.environment.children : null, "Good with children"),
                 boolLine(a.environment != null ? a.environment.dogs     : null, "Good with dogs"),
@@ -246,12 +261,10 @@ public class PetDetailFragment extends Fragment {
         );
         if (!TextUtils.isEmpty(env)) sb.append(env);
 
-        // 5) Personality tags
         if (a.tags != null && !a.tags.isEmpty()) {
             sb.append("• Personality: ").append(TextUtils.join(", ", a.tags)).append("\n");
         }
 
-        // 6) Location / contact
         String locality = null;
         if (a.contact != null && a.contact.address != null) {
             locality = joinPair(a.contact.address.city, a.contact.address.state, ", ");
@@ -262,7 +275,6 @@ public class PetDetailFragment extends Fragment {
         return stripTrailingWhitespace(sb.toString());
     }
 
-    // ---------- helpers ----------
     private void addIfNotEmpty(List<String> list, String value) {
         if (!TextUtils.isEmpty(value)) list.add(value);
     }

@@ -7,6 +7,8 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -29,11 +31,10 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.petpalfinder.R;
 import com.example.petpalfinder.data.FilterParams;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
 import java.util.Map;
 import android.location.LocationListener;
-import android.os.Looper;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 public class PetSearchFragment extends Fragment implements FilterBottomSheetFragment.Listener {
 
@@ -42,6 +43,7 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
     private RecyclerView list;
     private SharedPreferences prefs;
     private ActivityResultLauncher<String[]> locationPermsLauncher;
+    private Handler fabHandler = new Handler(Looper.getMainLooper());
 
     @Nullable
     @Override
@@ -60,10 +62,20 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
         View locationBar = v.findViewById(R.id.location_bar);
         TextInputEditText locationEditText = locationBar.findViewById(R.id.location_edit_text);
         ImageButton myLocationButton = locationBar.findViewById(R.id.my_location_button);
-        // Add references to the new FABs
-        FloatingActionButton fabFilters = v.findViewById(R.id.fab_filters);
-        FloatingActionButton fabMap = v.findViewById(R.id.fab_map);
-        FloatingActionButton fabFavorites = v.findViewById(R.id.fab_favorites_list);
+        // Change to ExtendedFloatingActionButton
+        ExtendedFloatingActionButton fabFilters = v.findViewById(R.id.fab_filters);
+        ExtendedFloatingActionButton fabMap = v.findViewById(R.id.fab_map);
+        ExtendedFloatingActionButton fabFavorites = v.findViewById(R.id.fab_favorites_list);
+
+        // --- Shrink FABs after a delay ---
+        fabHandler.postDelayed(() -> {
+            if (isAdded()) { // Ensure fragment is still attached
+                fabFilters.shrink();
+                fabMap.shrink();
+                fabFavorites.shrink();
+            }
+        }, 10000); // 10 seconds
+
 
         // --- LOCATION PERMISSIONS LAUNCHER ---
         locationPermsLauncher = registerForActivityResult(
@@ -128,11 +140,10 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
             return false;
         });
 
-        // --- ADD NEW FAB CLICK LISTENERS ---
+        // --- FAB CLICK LISTENERS ---
         fabFilters.setOnClickListener(click -> {
             FilterParams cur = vm.getFilters().getValue();
             if (cur == null) {
-                // Use filter prefs, not location prefs
                 SharedPreferences filterPrefs = requireContext().getSharedPreferences("filters", Context.MODE_PRIVATE);
                 cur = FilterParams.fromPrefs(filterPrefs.getAll(), null);
             }
@@ -176,7 +187,6 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
     @Override
     public void onFiltersApplied(FilterParams params) {
         vm.applyFilters(params);
-        // Save filters to the correct prefs file
         SharedPreferences filterPrefs = requireContext().getSharedPreferences("filters", Context.MODE_PRIVATE);
         SharedPreferences.Editor e = filterPrefs.edit();
         for (Map.Entry<String, String> en : params.toPrefs().entrySet()) {
@@ -184,6 +194,13 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
         }
         e.apply();
         if (list != null) list.scrollToPosition(0);
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        // Remove any pending callbacks to avoid memory leaks
+        fabHandler.removeCallbacksAndMessages(null);
     }
 
     // --- Location Helper Methods ---
@@ -200,31 +217,25 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
     private void useCurrentDeviceLocation() {
         if (getContext() == null) return;
         try {
-            android.location.LocationManager lm = (android.location.LocationManager) requireContext().getSystemService(Context.LOCATION_SERVICE);
+            LocationManager lm = (LocationManager) requireContext().getSystemService(Context.LOCATION_SERVICE);
             if (lm == null) throw new Exception("LocationManager not found");
 
-            // Define the listener that will receive the single location update
             final LocationListener locationListener = new LocationListener() {
                 @Override
                 public void onLocationChanged(Location loc) {
-                    // We got the location. Now update the ViewModel
                     String latLngQuery = loc.getLatitude() + "," + loc.getLongitude();
                     vm.searchAtLocation(latLngQuery);
-
                     if (getActivity() != null) {
                         getActivity().runOnUiThread(() ->
                                 Toast.makeText(getContext(), "Location found!", Toast.LENGTH_SHORT).show()
                         );
                     }
                 }
-
-                // Add other required overrides, even if empty
                 @Override public void onStatusChanged(String provider, int status, Bundle extras) {}
                 @Override public void onProviderEnabled(String provider) {}
                 @Override public void onProviderDisabled(String provider) {}
             };
 
-            // Check which providers are enabled and request a single update
             boolean isGpsEnabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
             boolean isNetworkEnabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
@@ -234,7 +245,6 @@ public class PetSearchFragment extends Fragment implements FilterBottomSheetFrag
             } else if (isGpsEnabled) {
                 lm.requestSingleUpdate(LocationManager.GPS_PROVIDER, locationListener, Looper.getMainLooper());
             } else {
-                // No providers are enabled in settings
                 Toast.makeText(getContext(), "Could not retrieve location. Please ensure GPS or Network location is enabled.", Toast.LENGTH_LONG).show();
             }
 
