@@ -209,7 +209,6 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
         }
     }
 
-    // *** FIX 1: This method now uses the GesturesPlugin to add the listener ***
     private void attachTapHandlers() {
         if (mapView == null) return;
 
@@ -243,7 +242,6 @@ public class MapFragment extends Fragment implements FilterBottomSheetFragment.L
         });
     }
 
-    // *** FIX 2: This method now passes the animal ID directly when creating the action ***
     private void openDetails(long id) {
         NavHostFragment.findNavController(this).navigate(
                 MapFragmentDirections.actionMapToPetDetail(id)
